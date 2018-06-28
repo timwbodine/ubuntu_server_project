@@ -1,0 +1,6 @@
+Host grader
+	HostName 18.216.11.149
+	User grader
+	Port 2200
+	IdentityFile ~/.ssh/grader_rsa
+	
