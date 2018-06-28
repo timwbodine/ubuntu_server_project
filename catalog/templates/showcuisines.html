@@ -1,0 +1,20 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+
+    <header>
+      <h1>All Cuisines</h1>
+    </header>
+    <ul>
+      {% if not cuisines%}
+        <h1>There are no cuisines.  Humanity is extinct.</h1>
+      {% else %}
+			{% for cuisine in cuisines %}
+			<a href="{{url_for('cuisine_recipes_handler', cuisine_id=cuisine.cuisine_id)}}"><h2>{{cuisine.cuisine_id}}</h2></a>
+		  {% endfor %}
+			{% endif %}
+    </ul>
+    <a href = "{{url_for('all_recipes_handler')}}">All Recipes </a>
+
+
+{% endblock %}

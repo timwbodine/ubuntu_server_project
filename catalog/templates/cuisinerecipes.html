@@ -1,0 +1,77 @@
+ {% extends "main.html" %} {% block content %} {% include "header.html" %}
+
+<div class="content-container">
+    <div class="content-item-a">
+        <header>
+            <h1>All Cuisines</h1>
+        </header>
+        <ul>
+            {% if not cuisines%}
+            <h1>There are no cuisines.  Humanity is extinct.</h1> {% else %} {% for cuisine in cuisines %}
+            <a href="{{url_for('cuisine_recipes_handler', cuisine_id=cuisine.cuisine_id)}}"><h2>{{cuisine.cuisine_id}}</h2></a> {% endfor %} {% endif %}
+        </ul>
+        <div>
+            <a href="{{url_for('all_recipes_handler')}}">All Recipes </a>
+        </div>
+        <div>
+            <a href="{{url_for('createRecipe')}}">Create New</a>
+        </div>
+    </div>
+    <div class="content-item-b">
+        <header>
+            <h1>{{cuisine}}</h1>
+        </header>
+        <ul>
+            {% if not recipes%}
+            <h1> you aint got no recipes.</h1> {% else %} {% for recipe in recipes %}
+            <li>
+                <h2><a href="{{url_for('recipe_handler', cuisine_id=recipe[0].cuisine_id, id=recipe[0].id)}}">{{recipe[0].name}}</a></h2>
+                <p>{{recipe[0].description[:80]}}...</p>
+                <p>{{recipe[0].difficulty}}</p>
+                <p>{{recipe[1].name}}</p>
+                {% if user_id == recipe[1].id %}
+                <a href="{{url_for('recipe_handler', cuisine_id=recipe[0].cuisine_id, id=recipe[0].id)}}">Edit</a>
+                <a class="delete" data-id="{{recipe[0].id}}" data-cuisineid="{{recipe[0].cuisine_id}}" href="#">Delete</a> {% endif %}
+            </li>
+
+            {% endfor %} {% endif %}
+        </ul>
+        <a href="{{url_for('all_recipes_handler')}}"> Cancel </a>
+    </div>
+    <div class="content-item-c">
+        <h1>My {{cuisine}} Recipes</h1>
+        <ul>
+            {% if not recipes%}
+            <h1> you aint got no recipes.</h1> {% else %} {% for cuisine in cuisines %} {% for recipe in recipes %} {% if (recipe[0].cuisine_id == cuisine.cuisine_id) and (recipe[0].user_id == user_id)%}
+            <li>
+                <h2><a href="{{url_for('recipe_handler', cuisine_id=recipe[0].cuisine_id, id=recipe[0].id)}}">{{recipe[0].name}}</a></h2>
+                <p>{{recipe[0].description[:80]}}...</p>
+                <p>{{recipe[0].difficulty}}</p>
+                <a href="{{url_for('recipe_handler', cuisine_id=recipe[0].cuisine_id, id=recipe[0].id)}}">Edit</a>
+                <a class="delete" data-id="{{recipe[0].id}}" data-cuisineid="{{recipe[0].cuisine_id}}" href="#">Delete</a>
+            </li>
+
+            {% endif %} {% endfor %} {% endfor %} {% endif %}
+        </ul>
+    </div>
+    <script type="text/javascript">
+        $('.delete').click(function() {
+            console.log('/cuisines/' + $(this).attr('data-cuisineid') + '/recipes/' + $(this).attr('data-id').toString());
+            $.ajax({
+                type: 'delete',
+                url: '/cuisines/' + $(this).attr('data-cuisineid') + '/recipes/' + $(this).attr('data-id').toString() + '?state={{STATE}}',
+                success: function(data) {
+                    console.log('Deletion was successful.');
+                    console.log(data);
+                    window.location.reload();
+                },
+                error: function(data) {
+                    console.log('An error occurred.');
+                    console.log(data);
+
+                },
+            });
+        });
+    </script>
+</div>
+{% endblock %}

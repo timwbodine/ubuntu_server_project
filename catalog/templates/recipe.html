@@ -1,0 +1,135 @@
+{% extends "main.html" %} {% block content %} {% include "header.html" %}
+<div class="row divider blue">
+    <div class="col-md-12"></div>
+</div>
+<div class="row banner main">
+    <div class="col-md-1"></div>
+    <div class="col-md-11 padding-none">
+        <h1>{{recipe.name}}</h1>
+    </div>
+</div>
+<div class="gutter">
+	<div class='flash'>
+	    {% with messages = get_flashed_messages() %} {% if messages %}
+
+	    <ul>
+		{% for message in messages %}
+		<li> <strong> {{ message }} </strong> </li>
+		{% endfor %}
+	    </ul>
+	    {% endif %} {% endwith %}
+
+	</div>
+</div>
+<div class="row padding-top padding-bottom">
+    <div class="col-md-1"></div>
+    <div class="col-md-10 padding-none">
+
+    </div>
+    <div class="col-md-1"></div>
+</div>
+<div class="col-md-1"></div>
+{% if user_id != None and user_id == recipe.user_id %}
+<div class="row">
+    <div class="col-md-6 col-md-offset-1 padding-top">
+        <form id="editForm" action="{{url_for('recipe_handler', cuisine_id=cuisine_id, id=recipe.id)}}" method="put">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" maxlength="100" name="name" value="{{recipe.name}}">
+                <div class="padding-bottom"></div>
+                <label for="name">Description:</label>
+                <textarea rows="20" cols="100" type="text" class="form-control" maxlength="1000" name="description">
+                    {{recipe.description}}
+                </textarea>
+                <div class="padding-bottom"></div>
+                <label for="name">Difficulty:</label>
+                <select id="difficulty" class="form-control" name="difficulty">
+                    <option value="Easy">Easy</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                </select>
+                <div class="padding-bottom"></div>
+
+                <label for="name">Cuisine:</label>
+                <select id="cuisine" class="form-control" name="cuisine_id">
+                    <option value="Pizza">Pizza</option>
+                    <option value="Mexican">Mexican</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Sushi">Sushi</option>
+                    <option value="Indian">Indian</option>
+                    <option value="Italian">Italian</option>
+                </select>
+                <input type="hidden" name="state" value="{{STATE}}">
+                <div>
+                </div>
+                <button type="submit" class="btn btn-default" id="submit" type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    $('#cuisine').val('{{recipe.cuisine_id}}')
+    $('#difficulty').val('{{recipe.difficulty}}')
+</script>
+<a href="{{url_for('recipe_handler', cuisine_id=cuisine_id, id=recipe.id)}}"> Cancel </a> {% endif %} {% if user_id != creator.id %}
+<h3> {{recipe.description}}</h3>
+<h3> {{recipe.difficulty}}</h3>
+<h3> {{recipe.cuisine_id}}</h3>
+<h3>recipe created by {{creator.name}} </h3> {% endif %}
+<script type="text/javascript">
+    var frm = $('#editForm');
+
+    frm.submit(function(e) {
+
+        e.preventDefault();
+
+        $.ajax({
+            type: frm.attr('method'),
+            url: frm.attr('action'),
+            data: frm.serialize(),
+            success: function(data) {
+                console.log('Submission was successful.');
+                console.log(data);
+                window.location.href = "/cuisines/" + data + "/recipes"
+            },
+            error: function(data) {
+                console.log('An error occurred.');
+                console.log(data);
+            },
+        });
+    });
+</script>
+{%for ingredient in ingredients%}
+<li>{{ingredient.amount}} {{ingredient.unit}} {{ingredient.name}} {% if user_id == ingredient.user_id %}
+    <a href="{{url_for('ingredient_handler', id=ingredient.id, cuisine_id=recipe.cuisine_id, recipe_id=recipe.id)}}">Edit</a>
+    <a class="delete" id="{{ingredient.id}}" , href="#">Delete</a> {% endif %}
+</li>
+{%endfor%}
+<div>
+    {% if user_id == recipe.user_id %}
+    <a href="{{url_for('create_ingredient',cuisine_id=recipe.cuisine_id,recipe_id=recipe.id)}}">Add Ingredient</a> {% endif %}
+</div>
+<div class="col-md-1"></div>
+
+<script type="text/javascript">
+    $('.delete').each(function(i) {
+        id = $(this).attr('id')
+        $(this).click(function() {
+            $.ajax({
+                type: 'delete',
+                url: '/cuisines/{{cuisine_id}}/recipes/{{recipe.id}}/ingredients/' + id.toString() + '?state={{STATE}}',
+                success: function(data) {
+                    console.log('Deletion was successful.');
+                    console.log(data);
+                    window.location.href = "/cuisines/{{cuisine_id}}/recipes/{{recipe.id}}"
+                },
+                error: function(data) {
+                    console.log('An error occurred.');
+                    console.log(data);
+
+                },
+            });
+        });
+    });
+</script>
+{% endblock %}

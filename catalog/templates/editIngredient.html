@@ -1,0 +1,55 @@
+ {% extends "main.html" %} {% block content %} {% include "header.html" %}
+
+<header>
+    <h1>{{ingredient.name}}</h1>
+</header>
+<a href="{{url_for('createRecipe')}}">Create New</a>
+<ul>
+    <h2>{{cuisine_id}}</h2>
+
+    <div class="row">
+        <div class="col-md-6 col-md-offset-1 padding-top">
+            <form id="editForm" action="{{url_for('ingredient_handler', cuisine_id=cuisine_id, recipe_id=recipe_id,id=ingredient.id)}}" method="put">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" class="form-control" maxlength="100" name="name" value="{{ingredient.name}}">
+                    <div class="padding-bottom"></div>
+                    <label for="name">Amount:</label>
+                    <input type="text" class="form-control" maxlength="100" name="amount" value="{{ingredient.amount}}">
+                    <div class="padding-bottom"></div>
+                    <label for="name">Unit:</label>
+                    <input type="text" class="form-control" maxlength="100" name="unit" value="{{ingredient.unit}}">
+                    <div class="padding-bottom"></div>
+                    <input type=h idden name="state" value="{{STATE}}">
+                    <button type="submit" class="btn btn-default" id="submit" type="submit">
+                        <span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span>Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <a href="{{url_for('recipe_handler', cuisine_id=cuisine_id, id=recipe_id)}}"> Cancel </a>
+    <script type="text/javascript">
+        var frm = $('#editForm');
+
+        frm.submit(function(e) {
+
+            e.preventDefault();
+
+            $.ajax({
+                type: frm.attr('method'),
+                url: frm.attr('action'),
+                data: frm.serialize(),
+                success: function(data) {
+                    console.log('Submission was successful.');
+                    console.log(data);
+                    window.location.href = "/cuisines/{{cuisine_id}}/recipes/{{recipe_id}}"
+                },
+                error: function(data) {
+                    console.log('An error occurred.');
+                    console.log(data);
+                },
+            });
+        });
+    </script>
+
+    {% endblock %}

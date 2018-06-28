@@ -1,0 +1,3156 @@
+FUNCTION  4()
+Called 2 times
+Total time:   0.000245
+ Self time:   0.000027
+
+count  total (s)   self (s)
+    2   0.000035   0.000014     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'autoloclist: refresh')
+    2   0.000209   0.000012     call g:SyntasticAutoloclistNotifier.AutoToggle(a:loclist)
+
+FUNCTION  5()
+Called 2 times
+Total time:   0.000197
+ Self time:   0.000133
+
+count  total (s)   self (s)
+    2   0.000036   0.000011     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'autoloclist: toggle')
+    2   0.000041   0.000010     let auto_loc_list = syntastic#util#var('auto_loc_list')
+    2   0.000029   0.000021     if !a:loclist.isEmpty()
+    2              0.000025         if auto_loc_list == 1 || auto_loc_list == 3
+                                        call a:loclist.show()
+                                    endif
+    2              0.000002     else
+                                    if (auto_loc_list == 1 || auto_loc_list == 2) && !empty(get(w:, 'syntastic_loclist_set', []))
+                                        try
+                                            " Vim 7.4.2200 or later
+                                            let title = get(getloclist(0, { 'title': 1 }), 'title', ':SyntasticCheck ')
+                                        catch /\m^Vim\%((\a\+)\)\=:E\%(118\|731\)/
+                                            let title = ':SyntasticCheck '
+                                        endtry
+                            
+                                        if strpart(title, 0, 16) ==# ':SyntasticCheck '
+                                            " TODO: this will close the loc list window if one was opened
+                                            " by something other than syntastic
+                                            call SyntasticLoclistHide()
+                            
+                                            try
+                                                " Vim 7.4.2200 or later
+                                                call setloclist(0, [], 'r', { 'title': '' })
+                                            catch /\m^Vim\%((\a\+)\)\=:E\%(118\|731\)/
+                                                " do nothing
+                                            endtry
+                                            let w:syntastic_loclist_set = []
+                                        endif
+                                    endif
+                                endif
+
+FUNCTION  7()
+Called 2 times
+Total time:   0.000025
+ Self time:   0.000025
+
+count  total (s)   self (s)
+    2              0.000018     return has('balloon_eval') && syntastic#util#var('enable_balloons')
+
+FUNCTION  9()
+Called 2 times
+Total time:   0.000029
+ Self time:   0.000029
+
+count  total (s)   self (s)
+    2              0.000006     let b:syntastic_private_balloons = {}
+    2              0.000009     if has('balloon_eval')
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'balloons: reset')
+                                    unlet! b:syntastic_private_balloons
+                                    set noballooneval
+                                endif
+
+FUNCTION  syntastic#log#debug()
+Called 65 times
+Total time:   0.000800
+ Self time:   0.000540
+
+count  total (s)   self (s)
+   65   0.000678   0.000418     if !s:_isDebugEnabled(a:level)
+   65              0.000059         return
+                                endif
+                            
+                                let leader = s:_log_timestamp()
+                                call s:_logRedirect(1)
+                            
+                                if a:0
+                                    " filter out dictionary functions
+                                    echomsg leader . a:msg . ' ' . strtrans(string(type(a:1) == type({}) || type(a:1) == type([]) ? filter(copy(a:1), 'type(v:val) != type(function("tr"))') : a:1))
+                                else
+                                    echomsg leader . a:msg
+                                endif
+                            
+                                call s:_logRedirect(0)
+
+FUNCTION  AutoPairsSpace()
+Called 4 times
+Total time:   0.000155
+ Self time:   0.000155
+
+count  total (s)   self (s)
+    4              0.000045   let line = getline('.')
+    4              0.000028   let prev_char = line[col('.')-2]
+    4              0.000007   let cmd = ''
+    4              0.000013   let cur_char =line[col('.')-1]
+    4              0.000026   if has_key(g:AutoPairsParens, prev_char) && g:AutoPairsParens[prev_char] == cur_char
+                                let cmd = "\<SPACE>".s:Left
+                              endif
+    4              0.000015   return "\<SPACE>".cmd
+
+FUNCTION  <SNR>83_cache()
+Called 5 times
+Total time:   0.841953
+ Self time:   0.444850
+
+count  total (s)   self (s)
+    5              0.000043     let cache = [{}]  " With padding for lnum offset
+    5              0.000563     let lines = getbufline(bufnr('%'), 1, '$')
+    5              0.000039     let lnum_last = len(lines)
+    5              0.000025     call insert(lines, '')  " Padding for lnum offset
+                            
+    5   0.000124   0.000075     let ind_spaces = s:indent_spaces()
+                            
+    5              0.000019     let defs_stack = []
+    5              0.000009     let ind_def = -1
+    5              0.000007     let in_string = 0
+    5              0.000015     let docstring_start = -1
+    5              0.000008     let in_import = 0
+    5              0.000007     let was_import = 0
+ 1331              0.002471     for lnum in range(1, lnum_last)
+ 1326              0.004640         let line = lines[lnum]
+                            
+                                    " Multiline strings
+ 1326              0.001853         if in_string
+                                        let foldlevel = len(defs_stack)
+                                        call add(cache, {'is_blank': 0, 'is_comment': 0, 'foldexpr': foldlevel})
+                            
+                                        let string_match = s:multi_string(line, string_end_re, 1)
+                                        if string_match[0]
+                                            " Starting new multiline string?
+                                            if string_match[2]
+                                                let in_string_single = string_match[1]
+                                                let string_end_re = string_match[3]
+                                                let docstring_start = -1  " Invalid docstring
+                                            elseif in_string_single && line !~# s:line_cont_re
+                                                let in_string = 0
+                                            endif
+                                        else
+                                            if docstring_start != -1
+                                                let foldlevel += 1
+                                                let cache[docstring_start]['foldexpr'] = '>' . foldlevel
+                                                for lnum_docstring in range((docstring_start + 1), lnum)
+                                                    let cache[lnum_docstring]['foldexpr'] = foldlevel
+                                                endfor
+                                                let docstring_start = -1
+                                            endif
+                                            let in_string = 0
+                                        endif
+                                        continue
+                                    endif
+                            
+                                    " Blank lines
+ 1326              0.017822         if line =~# s:blank_re
+  117              0.000230             if lnum == lnum_last
+                                            call add(cache, {'is_blank': 1, 'is_comment': 0, 'foldexpr': 0})
+                                            call s:blanks_adj(cache, lnum, 0)
+                                        else
+  117              0.000986                 call add(cache, {'is_blank': 1, 'is_comment': 0, 'foldexpr': len(defs_stack)})
+  117              0.000150             endif
+  117              0.000239             continue
+                                    endif
+                            
+ 1209   0.065410   0.010217         let ind = s:indent(line, ind_spaces)
+                            
+                                    " Comments
+ 1209              0.014406         if line =~# s:comment_re
+   50              0.000376             call add(cache, {'is_blank': 0, 'is_comment': 1, 'indent': ind})
+   50              0.000113             let foldlevel = 0
+   50              0.000169             let defs_stack_len = len(defs_stack)
+   50              0.000255             for idx in range(defs_stack_len)
+   45              0.000307                 if ind > cache[defs_stack[idx]]['indent']
+   45              0.000170                     let foldlevel = defs_stack_len - idx
+   45              0.000063                     break
+                                            endif
+                                        endfor
+   50              0.000270             let cache[lnum]['foldexpr'] = foldlevel
+   50   0.001926   0.000560             call s:blanks_adj(cache, lnum, foldlevel)
+   50              0.000077             continue
+                                    endif
+                            
+ 1159              0.063588         call add(cache, {'is_blank': 0, 'is_comment': 0,            'is_def': line =~# b:SimpylFold_def_re, 'indent': ind})
+                            
+                                    " Definitions
+ 1159              0.005092         if cache[lnum]['is_def']
+   72              0.000219             if empty(defs_stack)
+   45              0.000130                 let defs_stack = [lnum]
+   45              0.000068             elseif ind == ind_def
+   22              0.000053                 let defs_stack[0] = lnum
+   22              0.000025             elseif ind > ind_def
+    5              0.000032                 call insert(defs_stack, lnum)
+    5              0.000006             elseif ind < ind_def
+                                            let defs_stack = [lnum] + s:defs_stack_prune(cache, defs_stack, ind)
+                                        endif
+   72              0.000327             let foldlevel = len(defs_stack) - 1
+   72              0.000197             let ind_def = ind
+   72   0.002335   0.000660             call s:blanks_adj(cache, lnum, foldlevel)
+   72              0.000450             let cache[lnum]['foldexpr'] = '>' . (foldlevel + 1)
+   72              0.000120             continue
+                                    endif
+                            
+                                    " Everything else
+ 1087              0.003220         if !empty(defs_stack)
+  959              0.001643             if ind == ind_def
+   35              0.000175                 let defs_stack = defs_stack[1:]
+   35              0.000087                 let ind_def = cache[defs_stack[0]]['indent']
+   35              0.000057             elseif ind < ind_def
+    5   0.000187   0.000050                 let defs_stack = s:defs_stack_prune(cache, defs_stack, ind)
+    5              0.000010                 if !empty(defs_stack)
+                                                let ind_def = cache[defs_stack[0]]['indent']
+                                            else
+    5              0.000006                     let ind_def = -1
+    5              0.000001                 endif
+    5              0.000003             endif
+  959              0.000895         endif
+ 1087              0.003794         let foldlevel = len(defs_stack)
+                            
+                                    " Multiline strings start
+ 1087   0.327345   0.013542         let string_match = s:multi_string(line, s:string_start_re, 0)
+ 1087              0.003339         if string_match[0]
+                                        let in_string = 1
+                                        let in_string_single = string_match[1]
+                                        let string_end_re = string_match[3]
+                            
+                                        " Docstrings
+                                        if b:SimpylFold_fold_docstring && !string_match[2] && string_match[4] =~# s:blank_re
+                                            let lnum_prev = lnum - 1
+                                            if lnum == 1 || s:are_lines_prev_blank(cache, lnum) || ( !cache[lnum_prev]['is_blank'] && !cache[lnum_prev]['is_comment'] && ( cache[lnum_prev]['is_def'] || lines[lnum_prev] =~# s:multi_def_end_re ) )
+                                                let docstring_start = lnum
+                                            endif
+                                        endif
+                            
+                                        let cache[lnum]['foldexpr'] = foldlevel
+                                        continue
+                                    endif
+                            
+                                    " Imports
+ 1087              0.002342         if b:SimpylFold_fold_import
+ 1087              0.001412             if in_import
+                                            if line =~# import_end_re
+                                                let in_import = 0
+                                            endif
+                            
+                                            call s:blanks_adj(cache, lnum, foldlevel + 1)
+                                            let cache[lnum]['foldexpr'] = foldlevel + 1
+                                            continue
+                                        elseif match(line, s:import_start_re) != -1
+   85              0.007041                 let import_cont_match = matchlist(line, s:import_cont_re)
+   85              0.000357                 if !empty(import_cont_match)
+                                                if import_cont_match[1] ==# '('
+                                                    let import_end_re = s:import_end_paren_re
+                                                    let in_import = 1
+                                                elseif import_cont_match[2] ==# '\'
+                                                    let import_end_re = s:import_end_esc_re
+                                                    let in_import = 1
+                                                endif
+                                            endif
+                            
+   85              0.000149                 if was_import
+   80   0.002845   0.001052                     call s:blanks_adj(cache, lnum, foldlevel + 1)
+   80              0.000440                     let cache[lnum]['foldexpr'] = foldlevel + 1
+   80              0.000132                 else
+    5              0.000031                     let cache[lnum]['foldexpr'] = '>' . (foldlevel + 1)
+    5              0.000003                 endif
+   85              0.000157                 let was_import = 1
+   85              0.000123                 continue
+                                        else
+ 1002              0.002300                 let was_import = 0
+ 1002              0.000962             endif
+ 1002              0.000920         endif
+                            
+                                    " Normal
+ 1002   0.032161   0.009074         call s:blanks_adj(cache, lnum, foldlevel)
+ 1002              0.004945         let cache[lnum]['foldexpr'] = foldlevel
+ 1002              0.001456     endfor
+                            
+    5              0.000007     return cache
+
+FUNCTION  <SNR>26_CacheErrors()
+Called 2 times
+Total time:   6.570950
+ Self time:   0.001460
+
+count  total (s)   self (s)
+    2   0.000037   0.000018     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'CacheErrors: ' . (len(a:checker_names) ? join(a:checker_names) : 'default checkers'))
+    2   0.003522   0.000311     call s:ClearCache(a:buf)
+    2   0.000152   0.000018     let newLoclist = g:SyntasticLoclist.New([])
+    2   0.000041   0.000028     call newLoclist.setOwner(a:buf)
+                            
+    2   0.000228   0.000011     if !s:_skip_file(a:buf)
+                                    " debug logging {{{3
+    2   0.000031   0.000012         call syntastic#log#debugShowVariables(g:_SYNTASTIC_DEBUG_TRACE, 'aggregate_errors')
+    2   0.000057   0.000038         if syntastic#util#isRunningWindows()
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TMP = ' . string($TMP) . ', $TEMP = ' . string($TEMP))
+                                    else
+    2   0.000030   0.000014             call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TERM = ' . string($TERM))
+    2   0.000026   0.000012             call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TMPDIR = ' . string($TMPDIR))
+    2              0.000001         endif
+    2   0.000023   0.000009         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$PATH = ' . string($PATH))
+    2   0.000075   0.000060         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getcwd() = ' . string(getcwd()))
+                                    " }}}3
+                            
+    2   0.000751   0.000030         let clist = s:registry.getCheckers(getbufvar(a:buf, '&filetype'), a:checker_names)
+                            
+    2   0.000202   0.000064         let aggregate_errors = syntastic#util#var('aggregate_errors') || len(syntastic#util#unique(map(copy(clist), 'v:val.getFiletype()'))) > 1
+    2              0.000007         let decorate_errors = aggregate_errors && syntastic#util#var('id_checkers')
+    2              0.000006         let sort_aggregated_errors = aggregate_errors && syntastic#util#var('sort_aggregated_errors')
+                            
+    2              0.000002         let names = []
+    2              0.000004         let unavailable_checkers = 0
+    4              0.000011         for checker in clist
+    4   0.000075   0.000051             let cname = checker.getCName()
+    4   0.000437   0.000016             if !checker.isAvailable()
+    1   0.000017   0.000008                 call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'CacheErrors: Checker ' . cname . ' is not available')
+    1              0.000003                 let unavailable_checkers += 1
+    1              0.000001                 continue
+                                        endif
+                            
+    3   0.000046   0.000019             call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'CacheErrors: Invoking checker: ' . cname)
+                            
+    3   6.548443   0.000148             let loclist = checker.getLocList()
+                            
+    3   0.000039   0.000020             if !loclist.isEmpty()
+    2              0.000002                 if decorate_errors
+                                                call loclist.decorate(cname)
+                                            endif
+    2              0.000006                 call add(names, cname)
+    2   0.000090   0.000024                 if checker.wantSort() && !sort_aggregated_errors
+    1   0.014519   0.000017                     call loclist.sort()
+    1   0.000023   0.000009                     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'sorted:', loclist)
+    1              0.000001                 endif
+                            
+    2   0.000086   0.000013                 call newLoclist.extend(loclist)
+                            
+    2              0.000003                 if !aggregate_errors
+    2              0.000002                     break
+                                            endif
+                                        endif
+    1              0.000003         endfor
+                            
+                                    " set names {{{3
+    2              0.000005         if !empty(names)
+    2   0.000165   0.000079             if len(syntastic#util#unique(map( copy(names), 'substitute(v:val, "\\m/.*", "", "")' ))) == 1
+    2              0.000029                 let type = substitute(names[0], '\m/.*', '', '')
+    2              0.000048                 let name = join(map( names, 'substitute(v:val, "\\m.\\{-}/", "", "")' ), ', ')
+    2   0.000041   0.000024                 call newLoclist.setName( name . ' ('. type . ')' )
+    2              0.000003             else
+                                            " checkers from mixed types
+                                            call newLoclist.setName(join(names, ', '))
+                                        endif
+    2              0.000002         endif
+                                    " }}}3
+                            
+                                    " issue warning about no active checkers {{{3
+    2              0.000005         if len(clist) == unavailable_checkers
+                                        if !empty(a:checker_names)
+                                            if len(a:checker_names) == 1
+                                                call syntastic#log#warn('checker ' . a:checker_names[0] . ' is not available')
+                                            else
+                                                call syntastic#log#warn('checkers ' . join(a:checker_names, ', ') . ' are not available')
+                                            endif
+                                        else
+                                            call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'CacheErrors: no checkers available for ' . &filetype)
+                                        endif
+                                    endif
+                                    " }}}3
+                            
+    2   0.000034   0.000013         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'aggregated:', newLoclist)
+    2              0.000003         if sort_aggregated_errors
+                                        call newLoclist.sort()
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'sorted:', newLoclist)
+                                    endif
+    2              0.000001     endif
+                            
+    2   0.001375   0.000009     call newLoclist.deploy()
+
+FUNCTION  <SNR>76__isDebugEnabled_smart()
+Called 73 times
+Total time:   0.000285
+ Self time:   0.000285
+
+count  total (s)   self (s)
+   73              0.000227     return and(g:syntastic_debug, a:level)
+
+FUNCTION  syntastic#log#debugShowOptions()
+Called 2 times
+Total time:   0.000016
+ Self time:   0.000011
+
+count  total (s)   self (s)
+    2   0.000013   0.000008     if !s:_isDebugEnabled(a:level)
+    2              0.000001         return
+                                endif
+                            
+                                let leader = s:_log_timestamp()
+                                call s:_logRedirect(1)
+                            
+                                let vlist = copy(type(a:names) == type('') ? [a:names] : a:names)
+                                let add_shell = index(vlist, 'shell') >= 0 && &shell !=# syntastic#util#var('shell')
+                                if !empty(vlist)
+                                    call map(vlist, "'&' . v:val . ' = ' . strtrans(string(eval('&' . v:val))) . (s:_is_modified(v:val) ? ' (!)' : '')")
+                                    if add_shell
+                                        call add(vlist, 'u:shell = ' . strtrans(string(syntastic#util#var('shell'))) . ' (!)')
+                                    endif
+                                    echomsg leader . join(vlist, ', ')
+                                endif
+                                call s:_logRedirect(0)
+
+FUNCTION  <SNR>77_Complete()
+Called 119 times
+Total time:   0.003891
+ Self time:   0.002940
+
+count  total (s)   self (s)
+                              " Do not call user's completion function if the start column is after the
+                              " current column or if there are no candidates. Close the completion menu
+                              " instead. This avoids keeping the user in completion mode.
+  119              0.000792   if s:completion.start_column > col( '.' ) || empty( s:completion.candidates )
+   88   0.001240   0.000563     call s:CloseCompletionMenu()
+   88              0.000083   else
+                                " <c-x><c-u> invokes the user's completion function (which we have set to
+                                " youcompleteme#CompleteFunc), and <c-p> tells Vim to select the previous
+                                " completion candidate. This is necessary because by default, Vim selects the
+                                " first candidate when completion is invoked, and selecting a candidate
+                                " automatically replaces the current text with it. Calling <c-p> forces Vim to
+                                " deselect the first candidate and in turn preserve the user's current text
+                                " until he explicitly chooses to replace it with a completion.
+   31   0.000569   0.000295     call s:SendKeys( "\<C-X>\<C-U>\<C-P>" )
+   31              0.000030   endif
+
+FUNCTION  <SNR>21__compare_error_items_by_columns()
+Called 856 times
+Total time:   0.008787
+ Self time:   0.008787
+
+count  total (s)   self (s)
+  856              0.001739     if a:a['bufnr'] != a:b['bufnr']
+                                    " group by file
+                                    return a:a['bufnr'] - a:b['bufnr']
+                                elseif a:a['lnum'] != a:b['lnum']
+                                    " sort by line
+  709              0.001577         return a:a['lnum'] - a:b['lnum']
+                                elseif a:a['scol'] != a:b['scol']
+                                    " sort by screen column
+   27              0.000083         return a:a['scol'] - a:b['scol']
+                                elseif a:a['type'] !=? a:b['type']
+                                    " errors take precedence over warnings
+    6              0.000014         return a:a['type'] ==? 'E' ? -1 : 1
+                                else
+  114              0.000126         return 0
+                                endif
+
+FUNCTION  <SNR>77_SendKeys()
+Called 49 times
+Total time:   0.000527
+ Self time:   0.000527
+
+count  total (s)   self (s)
+                              " By default keys are added to the end of the typeahead buffer. If there are
+                              " already keys in the buffer, they will be processed first and may change the
+                              " state that our keys combination was sent for (e.g. <C-X><C-U><C-P> in normal
+                              " mode instead of insert mode or <C-e> outside of completion mode). We avoid
+                              " that by inserting the keys at the start of the typeahead buffer with the 'i'
+                              " option. Also, we don't want the keys to be remapped to something else so we
+                              " add the 'n' option.
+   49              0.000270   call feedkeys( a:keys, 'in' )
+
+FUNCTION  syntastic#util#shescape()
+Called 10 times
+Total time:   0.000430
+ Self time:   0.000430
+
+count  total (s)   self (s)
+   10              0.000422     return a:string =~# '\m^[A-Za-z0-9_/.-]\+$' ? a:string : shellescape(a:string)
+
+FUNCTION  <SNR>83_blanks_adj()
+Called 1204 times
+Total time:   0.027921
+ Self time:   0.027921
+
+count  total (s)   self (s)
+ 1204              0.004924     let lnum_prev = a:lnum - 1
+ 1396              0.012547     while lnum_prev != 0 && ( a:cache[lnum_prev]['is_blank'] || ( a:cache[lnum_prev]['is_comment'] && a:cache[lnum_prev]['indent'] <= a:cache[(a:lnum)]['indent'] ) )
+  192              0.000947         let a:cache[lnum_prev]['foldexpr'] = a:foldlevel
+  192              0.000415         let lnum_prev -= 1
+  192              0.000355     endwhile
+
+FUNCTION  <SNR>26_UpdateErrors()
+Called 2 times
+Total time:   7.343453
+ Self time:   0.000497
+
+count  total (s)   self (s)
+    2   0.000061   0.000034     call syntastic#log#debugShowVariables(g:_SYNTASTIC_DEBUG_TRACE, 'version')
+    2   0.000049   0.000033     call syntastic#log#debugShowOptions(g:_SYNTASTIC_DEBUG_TRACE, g:_SYNTASTIC_SHELL_OPTIONS)
+    2   0.000039   0.000023     call syntastic#log#debugDump(g:_SYNTASTIC_DEBUG_VARIABLES)
+    2   0.000041   0.000022     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'UpdateErrors' . (a:auto_invoked ? ' (auto)' : '') . ': ' . (len(a:checker_names) ? join(a:checker_names) : 'default checkers'))
+                            
+    2   0.000079   0.000022     call s:modemap.synch()
+                            
+    2   0.000325   0.000033     if s:_skip_file(a:buf)
+                                    return
+                                endif
+                            
+    2   0.000292   0.000025     let run_checks = !a:auto_invoked || s:modemap.doAutoChecking(a:buf)
+    2              0.000002     if run_checks
+    2   6.571063   0.000113         call s:CacheErrors(a:buf, a:checker_names)
+    2   0.000049   0.000034         call syntastic#util#setLastTick(a:buf)
+    2              0.000003     elseif a:auto_invoked
+                                    return
+                                endif
+                            
+    2   0.000079   0.000014     let loclist = g:SyntasticLoclist.current(a:buf)
+                            
+    2              0.000007     if exists('*SyntasticCheckHook')
+                                    call SyntasticCheckHook(loclist.getRaw())
+                                endif
+                            
+                                " populate loclist and jump {{{3
+    2   0.000038   0.000012     let do_jump = syntastic#util#var('auto_jump') + 0
+    2              0.000002     if do_jump == 2
+                                    let do_jump = loclist.getFirstError(1)
+                                elseif do_jump == 3
+                                    let do_jump = loclist.getFirstError()
+                                elseif 0 > do_jump || do_jump > 3
+                                    let do_jump = 0
+                                endif
+                            
+    2   0.000031   0.000007     if syntastic#util#var('always_populate_loc_list') || do_jump
+                                    call loclist.setloclist(1)
+                                    if run_checks && do_jump && !loclist.isEmpty()
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'loclist: jump')
+                                        execute 'silent! lrewind ' . do_jump
+                            
+                                        " XXX: Vim doesn't call autocmd commands in a predictible
+                                        " order, which can lead to missing filetype when jumping
+                                        " to a new file; the following is a workaround for the
+                                        " resulting brain damage
+                                        if &filetype ==# ''
+                                            silent! filetype detect
+                                        endif
+                                    endif
+                                endif
+                                " }}}3
+                            
+    2   0.771210   0.000028     call s:notifiers.refresh(loclist)
+
+FUNCTION  <SNR>83_indent()
+Called 1209 times
+Total time:   0.055193
+ Self time:   0.055193
+
+count  total (s)   self (s)
+ 1209              0.018131     let ind = matchend(a:line, '^ *') / a:ind_spaces
+ 1209              0.002448     if ind == 0
+  240              0.001730         let ind = matchend(a:line, '^\t*')
+  240              0.000257     endif
+                                " Fix indent for solo def multiline endings
+ 1209              0.020879     if a:line =~# s:multi_def_end_solo_re
+                                    return ind + 1
+                                endif
+ 1209              0.001752     return ind
+
+FUNCTION  <SNR>85_StatementStart()
+Called 6 times
+Total time:   0.532168
+ Self time:   0.000183
+
+count  total (s)   self (s)
+    6              0.000012     let lnum = a:lnum
+    6              0.000009     while 1
+    6              0.000030         if getline(lnum - 1) =~ '\\$'
+                                        let lnum = lnum - 1
+                                    else
+    6              0.000015             call cursor(lnum, 1)
+    6   0.532048   0.000063             let maybe_lnum = s:SearchParensPair()
+    6              0.000008             if maybe_lnum < 1
+    6              0.000008                 return lnum
+                                        else
+                                            let lnum = maybe_lnum
+                                        endif
+                                    endif
+                                endwhile
+
+FUNCTION  <SNR>56_Highlight_Matching_Pair()
+Called 169 times
+Total time:   0.025329
+ Self time:   0.025329
+
+count  total (s)   self (s)
+                              " Remove any previous match.
+  169              0.001219   if exists('w:paren_hl_on') && w:paren_hl_on
+    7              0.000060     silent! call matchdelete(3)
+    7              0.000019     let w:paren_hl_on = 0
+    7              0.000008   endif
+                            
+                              " Avoid that we remove the popup menu.
+                              " Return when there are no colors (looks like the cursor jumps).
+  169              0.000928   if pumvisible() || (&t_Co < 8 && !has("gui_running"))
+                                return
+                              endif
+                            
+                              " Get the character under the cursor and check if it's in 'matchpairs'.
+  169              0.000593   let c_lnum = line('.')
+  169              0.000428   let c_col = col('.')
+  169              0.000233   let before = 0
+                            
+  169              0.000550   let text = getline(c_lnum)
+  169              0.004738   let matches = matchlist(text, '\(.\)\=\%'.c_col.'c\(.\=\)')
+  169              0.000544   if empty(matches)
+                                let [c_before, c] = ['', '']
+                              else
+  169              0.000908     let [c_before, c] = matches[1:2]
+  169              0.000127   endif
+  169              0.004046   let plist = split(&matchpairs, '.\zs[:,]')
+  169              0.000689   let i = index(plist, c)
+  169              0.000231   if i < 0
+                                " not found, in Insert mode try character before the cursor
+  164              0.000693     if c_col > 1 && (mode() == 'i' || mode() == 'R')
+  132              0.000419       let before = strlen(c_before)
+  132              0.000190       let c = c_before
+  132              0.000329       let i = index(plist, c)
+  132              0.000081     endif
+  164              0.000152     if i < 0
+                                  " not found, nothing to do
+  162              0.000179       return
+                                endif
+    2              0.000001   endif
+                            
+                              " Figure out the arguments for searchpairpos().
+    7              0.000009   if i % 2 == 0
+                                let s_flags = 'nW'
+                                let c2 = plist[i + 1]
+                              else
+    7              0.000012     let s_flags = 'nbW'
+    7              0.000011     let c2 = c
+    7              0.000020     let c = plist[i - 1]
+    7              0.000004   endif
+    7              0.000011   if c == '['
+                                let c = '\['
+                                let c2 = '\]'
+                              endif
+                            
+                              " Find the match.  When it was just before the cursor move it there for a
+                              " moment.
+    7              0.000007   if before > 0
+    2              0.000008     let has_getcurpos = exists("*getcurpos")
+    2              0.000002     if has_getcurpos
+                                  " getcurpos() is more efficient but doesn't exist before 7.4.313.
+    2              0.000007       let save_cursor = getcurpos()
+    2              0.000002     else
+                                  let save_cursor = winsaveview()
+                                endif
+    2              0.000009     call cursor(c_lnum, c_col - before)
+    2              0.000001   endif
+                            
+                              " Build an expression that detects whether the current cursor position is in
+                              " certain syntax types (string, comment, etc.), for use as searchpairpos()'s
+                              " skip argument.
+                              " We match "escape" for special items, such as lispEscapeSpecial.
+    7              0.000031   let s_skip = '!empty(filter(map(synstack(line("."), col(".")), ''synIDattr(v:val, "name")''), ' . '''v:val =~? "string\\|character\\|singlequote\\|escape\\|comment"''))'
+                              " If executing the expression determines that the cursor is currently in
+                              " one of the syntax types, then we want searchpairpos() to find the pair
+                              " within those syntax types (i.e., not skip).  Otherwise, the cursor is
+                              " outside of the syntax types and s_skip should keep its value so we skip any
+                              " matching pair inside the syntax types.
+    7              0.001230   execute 'if' s_skip '| let s_skip = 0 | endif'
+                            
+                              " Limit the search to lines visible in the window.
+    7              0.000042   let stoplinebottom = line('w$')
+    7              0.000021   let stoplinetop = line('w0')
+    7              0.000009   if i % 2 == 0
+                                let stopline = stoplinebottom
+                              else
+    7              0.000014     let stopline = stoplinetop
+    7              0.000004   endif
+                            
+                              " Limit the search time to 300 msec to avoid a hang on very long lines.
+                              " This fails when a timeout is not supported.
+    7              0.000022   if mode() == 'i' || mode() == 'R'
+    7              0.000042     let timeout = exists("b:matchparen_insert_timeout") ? b:matchparen_insert_timeout : g:matchparen_insert_timeout
+    7              0.000006   else
+                                let timeout = exists("b:matchparen_timeout") ? b:matchparen_timeout : g:matchparen_timeout
+                              endif
+    7              0.000007   try
+    7              0.001323     let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline, timeout)
+    7              0.000026   catch /E118/
+                                " Can't use the timeout, restrict the stopline a bit more to avoid taking
+                                " a long time on closed folds and long lines.
+                                " The "viewable" variables give a range in which we can scroll while
+                                " keeping the cursor at the same position.
+                                " adjustedScrolloff accounts for very large numbers of scrolloff.
+                                let adjustedScrolloff = min([&scrolloff, (line('w$') - line('w0')) / 2])
+                                let bottom_viewable = min([line('$'), c_lnum + &lines - adjustedScrolloff - 2])
+                                let top_viewable = max([1, c_lnum-&lines+adjustedScrolloff + 2])
+                                " one of these stoplines will be adjusted below, but the current values are
+                                " minimal boundaries within the current window
+                                if i % 2 == 0
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = min([line2byte("$"), line2byte(".") + col(".") + &smc * 2])
+                            	let stopline = min([bottom_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = min([bottom_viewable, c_lnum + 100])
+                                  endif
+                                  let stoplinebottom = stopline
+                                else
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = max([1, line2byte(".") + col(".") - &smc * 2])
+                            	let stopline = max([top_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = max([top_viewable, c_lnum - 100])
+                                  endif
+                                  let stoplinetop = stopline
+                                endif
+                                let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline)
+                              endtry
+                            
+    7              0.000010   if before > 0
+    2              0.000003     if has_getcurpos
+    2              0.000007       call setpos('.', save_cursor)
+    2              0.000002     else
+                                  call winrestview(save_cursor)
+                                endif
+    2              0.000002   endif
+                            
+                              " If a match is found setup match highlighting.
+    7              0.000019   if m_lnum > 0 && m_lnum >= stoplinetop && m_lnum <= stoplinebottom 
+    7              0.000044     if exists('*matchaddpos')
+    7              0.000258       call matchaddpos('MatchParen', [[c_lnum, c_col - before], [m_lnum, m_col]], 10, 3)
+    7              0.000008     else
+                                  exe '3match MatchParen /\(\%' . c_lnum . 'l\%' . (c_col - before) . 'c\)\|\(\%' . m_lnum . 'l\%' . m_col . 'c\)/'
+                                endif
+    7              0.000015     let w:paren_hl_on = 1
+    7              0.000005   endif
+
+FUNCTION  SyntasticRefreshCursor()
+Called 26 times
+Total time:   0.257491
+ Self time:   0.002655
+
+count  total (s)   self (s)
+   26              0.000175     if !exists('b:syntastic_private_messages') || empty(b:syntastic_private_messages)
+                                    " file not checked
+                                    return
+                                endif
+                            
+   26              0.000079     if !exists('b:syntastic_private_line')
+                                    let b:syntastic_private_line = -1
+                                endif
+   26              0.000067     let l = line('.')
+   26              0.000198     let current_messages = get(b:syntastic_private_messages, l, {})
+                            
+   26              0.000085     if !exists('b:syntastic_cursor_columns')
+                                    let b:syntastic_cursor_columns = g:syntastic_cursor_columns
+                                endif
+                            
+   26              0.000048     if b:syntastic_cursor_columns
+   26              0.000084         let c = virtcol('.')
+   26              0.000079         if !exists('b:syntastic_private_idx')
+                                        let b:syntastic_private_idx = -1
+                                    endif
+                            
+   26   0.000762   0.000236         if s:_is_same_index(l, b:syntastic_private_line, c, b:syntastic_private_idx, current_messages)
+    1              0.000000             return
+                                    else
+   25              0.000053             let b:syntastic_private_line = l
+   25              0.000020         endif
+                            
+   25              0.000053         if !empty(current_messages)
+    9   0.000149   0.000083             let b:syntastic_private_idx = s:_find_index(c, current_messages)
+    9   0.254369   0.000125             call syntastic#util#wideMsg(current_messages[b:syntastic_private_idx].text)
+    9              0.000030         else
+   16              0.000030             let b:syntastic_private_idx = -1
+   16              0.000188             echo
+   16              0.000016         endif
+   25              0.000022     else
+                                    if l == b:syntastic_private_line
+                                        return
+                                    endif
+                                    let b:syntastic_private_line = l
+                            
+                                    if !empty(current_messages)
+                                        call syntastic#util#wideMsg(current_messages[0].text)
+                                    else
+                                        echo
+                                    endif
+                                endif
+
+FUNCTION  <SNR>83_matchstrpos()
+Called 2291 times
+Total time:   0.136203
+ Self time:   0.136203
+
+count  total (s)   self (s)
+ 2291              0.004911     if s:exists_matchstrpos
+ 2291              0.129033         return matchstrpos(a:expr, a:pat)
+                                else
+                                    return [matchstr(a:expr, a:pat), match(a:expr, a:pat), matchend(a:expr, a:pat)]
+                                endif
+
+FUNCTION  11()
+Called 6 times
+Total time:   0.000009
+ Self time:   0.000009
+
+count  total (s)   self (s)
+    6              0.000009     return self._filetype
+
+FUNCTION  13()
+Called 9 times
+Total time:   0.000038
+ Self time:   0.000038
+
+count  total (s)   self (s)
+    9              0.000027     return self._filetype . '/' . self._name
+
+FUNCTION  14()
+Called 4 times
+Total time:   0.000329
+ Self time:   0.000195
+
+count  total (s)   self (s)
+    4              0.000007     if a:0
+                                    let self._exec = a:1
+                                else
+    4              0.000010         let suffix = self._name . '_exec'
+    4   0.000290   0.000156         let self._exec = expand( syntastic#util#var(self._filetype . '_' . suffix, syntastic#util#var(suffix, self._exec_default)), 1 )
+    4              0.000004     endif
+
+FUNCTION  15()
+Called 2 times
+Total time:   0.000002
+ Self time:   0.000002
+
+count  total (s)   self (s)
+    2              0.000002     return self._exec
+
+FUNCTION  16()
+Called 3 times
+Total time:   0.000126
+ Self time:   0.000043
+
+count  total (s)   self (s)
+    3   0.000120   0.000037     return syntastic#util#shescape(self._exec)
+
+FUNCTION  17()
+Called 3 times
+Total time:   6.547278
+ Self time:   0.000624
+
+count  total (s)   self (s)
+    3              0.000009     let checker_start = reltime()
+    3   0.000019   0.000010     let name = self.getCName()
+                            
+    3              0.000007     if has_key(self, '_enable')
+                                    let status = syntastic#util#var(self._enable, -1)
+                                    if type(status) != type(0)
+                                        call syntastic#log#error('checker ' . name . ': invalid value ' . strtrans(string(status)) . ' for g:syntastic_' . self._enable . '; try 0 or 1 instead')
+                                        return []
+                                    endif
+                                    if status < 0
+                                        call syntastic#log#error('checker ' . name . ': checks disabled for security reasons; ' . 'set g:syntastic_' . self._enable . ' to 1 to override')
+                                    endif
+                                    if status <= 0
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getLocList: checker ' . name . ' enabled but not forced')
+                                        return []
+                                    else
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getLocList: checker ' . name . ' forced')
+                                    endif
+                                endif
+                            
+    3              0.000003     try
+    3   6.546348   0.000176         let list = self._locListFunc()
+    3              0.000021         if self._exec !=# ''
+    3   0.000089   0.000049             call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getLocList: checker ' . name . ' returned ' . v:shell_error)
+    3              0.000002         endif
+    3              0.000004     catch /\m\C^Syntastic: checker error$/
+                                    let list = []
+                                    if self._exec !=# ''
+                                        call syntastic#log#error('checker ' . name . ' returned abnormal status ' . v:shell_error)
+                                    else
+                                        call syntastic#log#error('checker ' . name . ' aborted')
+                                    endif
+                                endtry
+    3   0.000098   0.000043     call self._populateHighlightRegexes(list)
+    3   0.000046   0.000020     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, name . ' raw:', list)
+    3   0.000345   0.000024     call self._quietMessages(list)
+    3   0.000147   0.000116     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getLocList: checker ' . name . ' run in ' . split(reltimestr(reltime(checker_start)))[0] . 's')
+    3              0.000011     return list
+
+FUNCTION  18()
+Called 3 times
+Total time:   6.548295
+ Self time:   0.000147
+
+count  total (s)   self (s)
+    3   6.548282   0.000134     return g:SyntasticLoclist.New(self.getLocListRaw())
+
+FUNCTION  syntastic#util#stamp()
+Called 4 times
+Total time:   0.000156
+ Self time:   0.000156
+
+count  total (s)   self (s)
+    4              0.000152     return split( split(reltimestr(reltime(g:_SYNTASTIC_START)))[0], '\.' )
+
+FUNCTION  100()
+Called 2 times
+Total time:   0.378475
+ Self time:   0.377071
+
+count  total (s)   self (s)
+    2              0.000036     if has('signs')
+   75              0.000159         for s in reverse(copy(a:ids))
+   73              0.374706             execute 'sign unplace ' . s
+   73   0.003440   0.002036             call remove(self._bufSignIds(), index(self._bufSignIds(), s))
+   73              0.000076         endfor
+    2              0.000003     endif
+
+FUNCTION  101()
+Called 221 times
+Total time:   0.002382
+ Self time:   0.002382
+
+count  total (s)   self (s)
+  221              0.001106     if !exists('b:syntastic_private_sign_ids')
+                                    let b:syntastic_private_sign_ids = []
+                                endif
+  221              0.000425     return b:syntastic_private_sign_ids
+
+FUNCTION  <SNR>26_BufWritePostHook()
+Called 2 times
+Total time:   7.345227
+ Self time:   0.000154
+
+count  total (s)   self (s)
+    2   0.001617   0.000045     let buf = syntastic#util#fname2buf(a:fname)
+    2   0.000093   0.000045     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_AUTOCOMMANDS, 'autocmd: BufWritePost, buffer ' . buf . ' = ' . string(a:fname))
+    2   7.343511   0.000058     call s:UpdateErrors(buf, 1, [])
+
+FUNCTION  21()
+Called 2 times
+Total time:   0.000056
+ Self time:   0.000034
+
+count  total (s)   self (s)
+    2   0.000015   0.000010     let leader = self.getCName() . ': '
+    2              0.000002     if a:0
+    2   0.000030   0.000013         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, leader . a:msg, a:1)
+    2              0.000002     else
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, leader . a:msg)
+                                endif
+
+FUNCTION  22()
+Called 3 times
+Total time:   0.001954
+ Self time:   0.000189
+
+count  total (s)   self (s)
+    3              0.000016     let basename = self._filetype . '_' . self._name . '_'
+                            
+    3              0.000005     let parts = []
+    3   0.000622   0.000038     call extend(parts, self._getOpt(a:opts, basename, 'exe', self.getExecEscaped()))
+    3   0.000259   0.000020     call extend(parts, self._getOpt(a:opts, basename, 'args', ''))
+    3   0.000528   0.000050     call extend(parts, self._getOpt(a:opts, basename, 'fname', syntastic#util#shexpand('%')))
+    3   0.000265   0.000020     call extend(parts, self._getOpt(a:opts, basename, 'post_args', ''))
+    3   0.000236   0.000017     call extend(parts, self._getOpt(a:opts, basename, 'tail', ''))
+                            
+    3              0.000009     return join(parts)
+
+FUNCTION  25()
+Called 2 times
+Total time:   0.000066
+ Self time:   0.000024
+
+count  total (s)   self (s)
+    2   0.000064   0.000022     return syntastic#util#var(self._filetype . '_' . self._name . '_sort', 0)
+
+FUNCTION  27()
+Called 3 times
+Total time:   0.000321
+ Self time:   0.000175
+
+count  total (s)   self (s)
+                                " wildcard quiet_messages
+    3   0.000092   0.000029     let quiet_filters = copy(syntastic#util#var('quiet_messages', {}))
+    3              0.000012     if type(quiet_filters) != type({})
+                                    call syntastic#log#warn('ignoring invalid syntastic_quiet_messages')
+                                    unlet quiet_filters
+                                    let quiet_filters = {}
+                                endif
+                            
+                                " per checker quiet_messages
+    3              0.000013     let name = self._filetype . '_' . self._name
+    3              0.000003     try
+    3   0.000072   0.000029         call extend( quiet_filters, copy(syntastic#util#var(name . '_quiet_messages', {})), 'force' )
+    3              0.000003     catch /\m^Vim\%((\a\+)\)\=:E712/
+                                    call syntastic#log#warn('ignoring invalid syntastic_' . name . '_quiet_messages')
+                                endtry
+                            
+    3   0.000056   0.000016     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'quiet_messages filter:', quiet_filters)
+                            
+    3              0.000006     if !empty(quiet_filters)
+                                    call syntastic#util#dictFilter(a:errors, quiet_filters)
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'filtered by quiet_messages:', a:errors)
+                                endif
+
+FUNCTION  28()
+Called 3 times
+Total time:   0.000055
+ Self time:   0.000055
+
+count  total (s)   self (s)
+    3              0.000013     if has_key(self, '_highlightRegexFunc')
+                                    for e in a:errors
+                                        if e['valid']
+                                            let term = self._highlightRegexFunc(e)
+                                            if term !=# ''
+                                                let e['hl'] = term
+                                            endif
+                                        endif
+                                    endfor
+                                endif
+
+FUNCTION  29()
+Called 15 times
+Total time:   0.001389
+ Self time:   0.000477
+
+count  total (s)   self (s)
+   15              0.000025     let ret = []
+   15   0.000335   0.000133     call extend( ret, syntastic#util#argsescape(get(a:opts, a:name . '_before', '')) )
+   15   0.000724   0.000185     call extend( ret, syntastic#util#argsescape(syntastic#util#var( a:basename . a:name, get(a:opts, a:name, a:default) )) )
+   15   0.000275   0.000104     call extend( ret, syntastic#util#argsescape(get(a:opts, a:name . '_after', '')) )
+                            
+   15              0.000013     return ret
+
+FUNCTION  <SNR>26__ignore_file()
+Called 4 times
+Total time:   0.000091
+ Self time:   0.000091
+
+count  total (s)   self (s)
+    4              0.000053     let fname = fnamemodify(a:filename, ':p')
+    4              0.000010     for pattern in g:syntastic_ignore_files
+                                    if fname =~# pattern
+                                        return 1
+                                    endif
+                                endfor
+    4              0.000004     return 0
+
+FUNCTION  31()
+Called 4 times
+Total time:   0.000092
+ Self time:   0.000024
+
+count  total (s)   self (s)
+    4   0.000091   0.000023     return syntastic#util#var('echo_current_error')
+
+FUNCTION  32()
+Called 2 times
+Total time:   0.018353
+ Self time:   0.000210
+
+count  total (s)   self (s)
+    2   0.000066   0.000016     if self.enabled() && !a:loclist.isEmpty()
+    2   0.000040   0.000020         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'cursor: refresh')
+    2   0.018163   0.000095         let b:syntastic_private_messages = copy(a:loclist.messages(bufnr('')))
+    2              0.000011         let b:syntastic_private_line = -1
+    2   0.000032   0.000027         let b:syntastic_cursor_columns = a:loclist.getCursorColumns()
+    2              0.000019         autocmd! syntastic CursorMoved
+    2              0.000015         autocmd syntastic CursorMoved * call SyntasticRefreshCursor()
+    2              0.000002     endif
+
+FUNCTION  33()
+Called 2 times
+Total time:   0.000071
+ Self time:   0.000054
+
+count  total (s)   self (s)
+    2   0.000028   0.000011     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'cursor: reset')
+    2              0.000010     autocmd! syntastic CursorMoved
+    2              0.000023     unlet! b:syntastic_private_messages
+    2              0.000005     let b:syntastic_private_line = -1
+
+FUNCTION  35()
+Called 4 times
+Total time:   0.000150
+ Self time:   0.000035
+
+count  total (s)   self (s)
+    4   0.000146   0.000031     return s:has_highlighting && syntastic#util#var('enable_highlighting')
+
+FUNCTION  36()
+Called 2 times
+Total time:   0.009158
+ Self time:   0.008940
+
+count  total (s)   self (s)
+    2   0.000064   0.000009     if self.enabled()
+    2   0.000051   0.000025         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'highlighting: refresh')
+    2   0.000063   0.000011         call self._reset()
+    2              0.000005         let buf = bufnr('')
+    2   0.000265   0.000180         let issues = filter(a:loclist.copyRaw(), 'v:val["bufnr"] == buf')
+  118              0.000180         for item in issues
+  116              0.001124             let group = 'Syntastic' . get(item, 'subtype', '') . ( item['type'] ==? 'E' ? 'Error' : 'Warning' )
+                            
+                                        " The function `Syntastic_{filetype}_{checker}_GetHighlightRegex` is
+                                        " used to override default highlighting.
+  116              0.000441             if has_key(item, 'hl')
+                                            call matchadd(group, '\%' . item['lnum'] . 'l' . item['hl'])
+                                        elseif get(item, 'col', 0)
+  116              0.000341                 if get(item, 'vcol', 0)
+                                                let lastcol = virtcol([item['lnum'], '$'])
+                                                let coltype = 'v'
+                                            else
+  116              0.000652                     let lastcol = col([item['lnum'], '$'])
+  116              0.000216                     let coltype = 'c'
+  116              0.000146                 endif
+  116              0.000615                 let lcol = min([lastcol, item['col']])
+                            
+  116              0.002692                 call matchadd(group, '\%' . item['lnum'] . 'l\%' . lcol . coltype)
+  116              0.000178             endif
+  116              0.000167         endfor
+    2              0.000001     endif
+
+FUNCTION  37()
+Called 2 times
+Total time:   0.001176
+ Self time:   0.000030
+
+count  total (s)   self (s)
+    2              0.000004     if s:has_highlighting
+    2   0.000028   0.000010         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'highlighting: reset')
+    2   0.001141   0.000013         call self._reset()
+    2              0.000001     endif
+
+FUNCTION  <SNR>77_PollCompletion()
+Called 141 times
+Total time:   0.075913
+ Self time:   0.006915
+
+count  total (s)   self (s)
+  141   0.032256   0.002312   if !s:Pyeval( 'ycm_state.CompletionRequestReady()' )
+   85              0.001449     let s:pollers.completion.id = timer_start( s:pollers.completion.wait_milliseconds, function( 's:PollCompletion' ) )
+   85              0.000112     return
+                              endif
+                            
+   56   0.037814   0.000846   let response = s:Pyeval( 'ycm_state.GetCompletionResponse()' )
+   56              0.000670   let s:completion = {   'start_column': response.completion_start_column,   'candidates': response.completions }
+   56   0.002583   0.000497   call s:Complete()
+
+FUNCTION  40()
+Called 5 times
+Total time:   0.001004
+ Self time:   0.001004
+
+count  total (s)   self (s)
+    5              0.000137     let newObj = copy(self)
+                            
+    5              0.000119     let llist = filter(copy(a:rawLoclist), 'v:val["valid"]')
+                            
+  121              0.000104     for e in llist
+  116              0.000224         if get(e, 'type', '') ==# ''
+                                        let e['type'] = 'E'
+                                    endif
+  116              0.000084     endfor
+                            
+    5              0.000014     let newObj._rawLoclist = llist
+    5              0.000009     let newObj._name = ''
+    5              0.000018     let newObj._owner = bufnr('')
+    5              0.000009     let newObj._sorted = 0
+    5              0.000013     let newObj._columns = g:syntastic_cursor_columns
+                            
+    5              0.000006     return newObj
+
+FUNCTION  41()
+Called 4 times
+Total time:   0.000138
+ Self time:   0.000110
+
+count  total (s)   self (s)
+    4              0.000012     let buf = a:0 ? a:1 : bufnr('')
+    4   0.000071   0.000043     let loclist = syntastic#util#getbufvar(buf, 'syntastic_loclist', {})
+    4              0.000020     if type(loclist) != type({}) || empty(loclist)
+                                    unlet! loclist
+                                    let loclist = g:SyntasticLoclist.New([])
+                                endif
+    4              0.000004     return loclist
+
+FUNCTION  42()
+Called 2 times
+Total time:   0.000073
+ Self time:   0.000042
+
+count  total (s)   self (s)
+    2   0.000073   0.000042     call extend(self._rawLoclist, a:other.copyRaw())
+
+FUNCTION  43()
+Called 1 time
+Total time:   0.014502
+ Self time:   0.002464
+
+count  total (s)   self (s)
+    1              0.000002     if !self._sorted
+  116              0.000096         for e in self._rawLoclist
+  115   0.005486   0.000482             call s:_set_screen_column(e)
+  115              0.000093         endfor
+                            
+    1   0.008789   0.001755         call sort(self._rawLoclist, self._columns ? 's:_compare_error_items_by_columns' : 's:_compare_error_items_by_lines')
+                            
+    1              0.000004         let self._sorted = 1
+    1              0.000001     endif
+
+FUNCTION  44()
+Called 11 times
+Total time:   0.000046
+ Self time:   0.000046
+
+count  total (s)   self (s)
+   11              0.000031     return empty(self._rawLoclist)
+
+FUNCTION  45()
+Called 4 times
+Total time:   0.000152
+ Self time:   0.000063
+
+count  total (s)   self (s)
+    4              0.000011     if !exists('self._stamp')
+                                    let self._stamp = []
+                                    return 0
+                                endif
+    4   0.000127   0.000038     return syntastic#util#compareLexi(self._stamp, a:stamp) > 0
+
+FUNCTION  46()
+Called 4 times
+Total time:   0.000116
+ Self time:   0.000116
+
+count  total (s)   self (s)
+    4              0.000114     return copy(self._rawLoclist)
+
+FUNCTION  48()
+Called 4 times
+Total time:   0.002540
+ Self time:   0.000585
+
+count  total (s)   self (s)
+    4   0.002537   0.000582     return syntastic#util#unique(map(copy(self._rawLoclist), 'str2nr(v:val["bufnr"])') + [self._owner])
+
+FUNCTION  49()
+Called 2 times
+Total time:   0.000005
+ Self time:   0.000005
+
+count  total (s)   self (s)
+    2              0.000004     return self._columns
+
+FUNCTION  AutoPairsDelete()
+Called 4 times
+Total time:   0.000825
+ Self time:   0.000825
+
+count  total (s)   self (s)
+    4              0.000039   if !b:autopairs_enabled
+                                return "\<BS>"
+                              end
+                            
+    4              0.000034   let line = getline('.')
+    4              0.000030   let pos = col('.') - 1
+    4              0.000114   let current_char = get(split(strpart(line, pos), '\zs'), 0, '')
+    4              0.000106   let prev_chars = split(strpart(line, 0, pos), '\zs')
+    4              0.000036   let prev_char = get(prev_chars, -1, '')
+    4              0.000017   let pprev_char = get(prev_chars, -2, '')
+                            
+    4              0.000013   if pprev_char == '\'
+                                return "\<BS>"
+                              end
+                            
+                              " Delete last two spaces in parens, work with MapSpace
+    4              0.000021   if has_key(b:AutoPairs, pprev_char) && prev_char == ' ' && current_char == ' '
+                                return "\<BS>\<DEL>"
+                              endif
+                            
+                              " Delete Repeated Pair eg: '''|''' [[|]] {{|}}
+    4              0.000012   if has_key(b:AutoPairs, prev_char)
+                                let times = 0
+                                let p = -1
+                                while get(prev_chars, p, '') == prev_char
+                                  let p = p - 1
+                                  let times = times + 1
+                                endwhile
+                            
+                                let close = b:AutoPairs[prev_char]
+                                let left = repeat(prev_char, times)
+                                let right = repeat(close, times)
+                            
+                                let before = strpart(line, pos-times, times)
+                                let after  = strpart(line, pos, times)
+                                if left == before && right == after
+                                  return repeat("\<BS>\<DEL>", times)
+                                end
+                              end
+                            
+                            
+    4              0.000014   if has_key(b:AutoPairs, prev_char)
+                                let close = b:AutoPairs[prev_char]
+                                if match(line,'^\s*'.close, col('.')-1) != -1
+                                  " Delete (|___)
+                                  let space = matchstr(line, '^\s*', col('.')-1)
+                                  return "\<BS>". repeat("\<DEL>", len(space)+1)
+                                elseif match(line, '^\s*$', col('.')-1) != -1
+                                  " Delete (|__\n___)
+                                  let nline = getline(line('.')+1)
+                                  if nline =~ '^\s*'.close
+                                    if &filetype == 'vim' && prev_char == '"'
+                                      " Keep next line's comment
+                                      return "\<BS>"
+                                    end
+                            
+                                    let space = matchstr(nline, '^\s*')
+                                    return "\<BS>\<DEL>". repeat("\<DEL>", len(space)+1)
+                                  end
+                                end
+                              end
+                            
+    4              0.000012   return "\<BS>"
+
+FUNCTION  SimpylFold#Recache()
+Called 5 times
+Total time:   0.003778
+ Self time:   0.003778
+
+count  total (s)   self (s)
+    5              0.000029     if exists('b:SimpylFold_cache')
+    5              0.003727         unlet b:SimpylFold_cache
+    5              0.000010     endif
+
+FUNCTION  <SNR>26__os_name()
+Called 6 times
+Total time:   0.000039
+ Self time:   0.000039
+
+count  total (s)   self (s)
+    6              0.000021     return g:_SYNTASTIC_UNAME
+
+FUNCTION  syntastic#util#redraw()
+Called 9 times
+Total time:   0.252957
+ Self time:   0.252957
+
+count  total (s)   self (s)
+    9              0.000016     if a:full
+                                    redraw!
+                                else
+    9              0.252877         redraw
+    9              0.000030     endif
+
+FUNCTION  53()
+Called 2 times
+Total time:   0.000017
+ Self time:   0.000017
+
+count  total (s)   self (s)
+    2              0.000013     let self._name = a:name
+
+FUNCTION  55()
+Called 2 times
+Total time:   0.000013
+ Self time:   0.000013
+
+count  total (s)   self (s)
+    2              0.000013     let self._owner = type(a:buffer) == type(0) ? a:buffer : str2nr(a:buffer)
+
+FUNCTION  56()
+Called 2 times
+Total time:   0.001366
+ Self time:   0.000081
+
+count  total (s)   self (s)
+    2   0.000107   0.000037     let self._stamp = syntastic#util#stamp()
+    4   0.001232   0.000017     for buf in self.getBuffers()
+    2              0.000015         call setbufvar(buf, 'syntastic_loclist', self)
+    2              0.000002     endfor
+
+FUNCTION  57()
+Called 2 times
+Total time:   0.001360
+ Self time:   0.000035
+
+count  total (s)   self (s)
+    4   0.001339   0.000014     for buf in self.getBuffers()
+    2              0.000011         call setbufvar(buf, 'syntastic_loclist', {})
+    2              0.000002     endfor
+
+FUNCTION  syntastic#util#rawVar()
+Called 57 times
+Total time:   0.000488
+ Self time:   0.000488
+
+count  total (s)   self (s)
+   57              0.000458     return get(b:, a:name, get(g:, a:name, a:0 ? a:1 : ''))
+
+FUNCTION  60()
+Called 4 times
+Total time:   0.000403
+ Self time:   0.000059
+
+count  total (s)   self (s)
+    4              0.000014     if !exists('self._cachedErrors')
+    2   0.000365   0.000021         let self._cachedErrors = self.filter({'type': 'E'})
+    2              0.000002     endif
+    4              0.000005     return self._cachedErrors
+
+FUNCTION  61()
+Called 4 times
+Total time:   0.000379
+ Self time:   0.000048
+
+count  total (s)   self (s)
+    4              0.000011     if !exists('self._cachedWarnings')
+    2   0.000348   0.000017         let self._cachedWarnings = self.filter({'type': 'W'})
+    2              0.000002     endif
+    4              0.000006     return self._cachedWarnings
+
+FUNCTION  63()
+Called 2 times
+Total time:   0.018068
+ Self time:   0.008174
+
+count  total (s)   self (s)
+    2              0.000006     if !exists('self._cachedMessages')
+    2              0.000022         let self._cachedMessages = {}
+                            
+    2   0.000089   0.000054         let errors = self.errors() + self.warnings()
+  118              0.000174         for e in errors
+  116              0.000242             let b = e['bufnr']
+  116              0.000238             let l = e['lnum']
+                            
+  116              0.000532             if !has_key(self._cachedMessages, b)
+    2              0.000008                 let self._cachedMessages[b] = {}
+    2              0.000030             endif
+                            
+  116              0.000507             if !has_key(self._cachedMessages[b], l)
+   73              0.000469                 let self._cachedMessages[b][l] = [e]
+   73              0.000169             elseif self._columns
+   43              0.000275                 call add(self._cachedMessages[b][l], e)
+   43              0.000068             endif
+  116              0.000124         endfor
+                            
+    2              0.000012         if self._columns
+    2              0.000004             if !self._sorted
+    4              0.000011                 for b in keys(self._cachedMessages)
+   75              0.000167                     for l in keys(self._cachedMessages[b])
+   73              0.000347                         if len(self._cachedMessages[b][l]) > 1
+   91              0.000205                             for e in self._cachedMessages[b][l]
+   67   0.002863   0.000561                                 call s:_set_screen_column(e)
+   67              0.000119                             endfor
+   24   0.002228   0.000475                             call sort(self._cachedMessages[b][l], 's:_compare_error_items_by_columns')
+   24              0.000037                         endif
+   73              0.000103                     endfor
+    2              0.000008                 endfor
+    2              0.000002             endif
+                            
+    4              0.000010             for b in keys(self._cachedMessages)
+   75              0.000178                 for l in keys(self._cachedMessages[b])
+   73   0.006679   0.000875                     call s:_remove_shadowed_items(self._cachedMessages[b][l])
+   73              0.000114                 endfor
+    2              0.000002             endfor
+    2              0.000001         endif
+    2              0.000002     endif
+                            
+    2              0.000009     return get(self._cachedMessages, a:buf, {})
+
+FUNCTION  64()
+Called 4 times
+Total time:   0.000675
+ Self time:   0.000644
+
+count  total (s)   self (s)
+    4   0.000114   0.000083     let conditions = values(map(copy(a:filters), 's:_translate(v:key, v:val)'))
+    4              0.000031     let filter = len(conditions) == 1 ? conditions[0] : join(map(conditions, '"(" . v:val . ")"'), ' && ')
+    4              0.000525     return filter(copy(self._rawLoclist), filter)
+
+FUNCTION  68()
+Called 2 times
+Total time:   0.000057
+ Self time:   0.000057
+
+count  total (s)   self (s)
+    2              0.000021     if exists('g:syntastic_mode_map')
+                                    let self._mode = get(g:syntastic_mode_map, 'mode', 'active')
+                                    let self._activeFiletypes = copy(get(g:syntastic_mode_map, 'active_filetypes', []))
+                                    let self._passiveFiletypes = copy(get(g:syntastic_mode_map, 'passive_filetypes', []))
+                                else
+    2              0.000005         let self._mode = 'active'
+    2              0.000004         let self._activeFiletypes = []
+    2              0.000002         let self._passiveFiletypes = []
+    2              0.000000     endif
+
+FUNCTION  69()
+Called 2 times
+Total time:   0.000231
+ Self time:   0.000085
+
+count  total (s)   self (s)
+    2   0.000043   0.000021     let registry = g:SyntasticRegistry.Instance()
+    2   0.000118   0.000026     let fts = registry.resolveFiletypes(a:filetype)
+                            
+    2   0.000016   0.000009     if self.isPassive()
+                                    return self._isOneFiletypeActive(fts)
+                                else
+    2   0.000042   0.000017         return self._noFiletypesArePassive(fts)
+                                endif
+
+FUNCTION  70()
+Called 2 times
+Total time:   0.000267
+ Self time:   0.000036
+
+count  total (s)   self (s)
+    2              0.000008     let local_mode = getbufvar(a:buf, 'syntastic_mode')
+    2              0.000006     if local_mode ==# 'active' || local_mode ==# 'passive'
+                                    return local_mode ==# 'active'
+                                endif
+                            
+    2   0.000247   0.000016     return self.allowsAutoChecking(getbufvar(a:buf, '&filetype'))
+
+FUNCTION  71()
+Called 2 times
+Total time:   0.000007
+ Self time:   0.000007
+
+count  total (s)   self (s)
+    2              0.000005     return self._mode ==# 'passive'
+
+FUNCTION  76()
+Called 2 times
+Total time:   0.000025
+ Self time:   0.000025
+
+count  total (s)   self (s)
+    2              0.000021     return empty(filter(copy(a:filetypes), 'index(self._passiveFiletypes, v:val) != -1'))
+
+FUNCTION  78()
+Called 2 times
+Total time:   0.771182
+ Self time:   0.001011
+
+count  total (s)   self (s)
+    2   0.000215   0.000057     if !syntastic#util#bufIsActive(bufnr('')) || (!a:loclist.isEmpty() && !a:loclist.isNewerThan([]))
+                                    " loclist not fully constructed yet
+                                    return
+                                endif
+                            
+    2   0.000028   0.000011     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'notifiers: refresh')
+   12              0.000037     for type in self._enabled_types
+   10              0.000213         let class = substitute(type, '\m.*', 'Syntastic\u&Notifier', '')
+   10   0.000347   0.000137         if !has_key(g:{class}, 'enabled') || self._notifier[type].enabled()
+    8              0.000039             if index(s:_PERSISTENT_NOTIFIERS, type) > -1
+                                            " refresh only if loclist has changed since last call
+    2              0.000012                 if !exists('b:syntastic_private_' . type . '_stamp')
+                                                let b:syntastic_private_{type}_stamp = []
+                                            endif
+    2   0.000078   0.000015                 if a:loclist.isNewerThan(b:syntastic_private_{type}_stamp) || a:loclist.isEmpty()
+    2   0.741918   0.000037                     call self._notifier[type].refresh(a:loclist)
+    2   0.000136   0.000050                     let b:syntastic_private_{type}_stamp = syntastic#util#stamp()
+    2              0.000003                 endif
+    2              0.000002             else
+    6   0.027880   0.000124                 call self._notifier[type].refresh(a:loclist)
+    6              0.000007             endif
+    8              0.000008         endif
+   10              0.000009     endfor
+
+FUNCTION  79()
+Called 2 times
+Total time:   0.001734
+ Self time:   0.000433
+
+count  total (s)   self (s)
+    2   0.000035   0.000010     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'notifiers: reset')
+   12              0.000016     for type in self._enabled_types
+   10              0.000161         let class = substitute(type, '\m.*', 'Syntastic\u&Notifier', '')
+                            
+                                    " reset notifiers regardless if they are enabled or not, since
+                                    " the user might have disabled them since the last refresh();
+                                    " notifiers MUST be prepared to deal with reset() when disabled
+   10              0.000048         if has_key(g:{class}, 'reset')
+    6   0.001329   0.000053             call self._notifier[type].reset(a:loclist)
+    6              0.000004         endif
+                            
+                                    " also reset stamps
+   10              0.000033         if index(s:_PERSISTENT_NOTIFIERS, type) > -1
+    4              0.000020             let b:syntastic_private_{type}_stamp = []
+    4              0.000002         endif
+   10              0.000008     endfor
+
+FUNCTION  <SNR>21__remove_shadowed_items()
+Called 73 times
+Total time:   0.005804
+ Self time:   0.005804
+
+count  total (s)   self (s)
+                                " keep only the first message at a given column
+   73              0.000190     let i = 0
+   97              0.000383     while i < len(a:errors) - 1
+   24              0.000075         let j = i + 1
+   24              0.000060         let dupes = 0
+   60              0.000352         while j < len(a:errors) && a:errors[j].scol == a:errors[i].scol
+   36              0.000084             let dupes = 1
+   36              0.000080             let j += 1
+   36              0.000053         endwhile
+   24              0.000039         if dupes
+   22              0.000134             call remove(a:errors, i + 1, j - 1)
+   22              0.000022         endif
+   24              0.000093         let i += 1
+   24              0.000033     endwhile
+                            
+                                " merge messages with the same text
+   73              0.000149     let i = 0
+   80              0.000326     while i < len(a:errors) - 1
+    7              0.000016         let j = i + 1
+    7              0.000010         let dupes = 0
+    7              0.000044         while j < len(a:errors) && a:errors[j].text == a:errors[i].text
+                                        let dupes = 1
+                                        let j += 1
+                                    endwhile
+    7              0.000007         if dupes
+                                        call remove(a:errors, i + 1, j - 1)
+                                    endif
+    7              0.000031         let i += 1
+    7              0.000035     endwhile
+
+FUNCTION  <SNR>77_InvokeCompletion()
+Called 63 times
+Total time:   0.125348
+ Self time:   0.105429
+
+count  total (s)   self (s)
+   63              0.104417   exec s:python_command "ycm_state.SendCompletionRequest(" . "vimsupport.GetBoolValue( 's:force_semantic' ) )"
+                            
+   63   0.020795   0.000876   call s:PollCompletion()
+
+FUNCTION  81()
+Called 2 times
+Total time:   0.000022
+ Self time:   0.000022
+
+count  total (s)   self (s)
+    2              0.000008     if !exists('s:SyntasticRegistryInstance')
+                                    let s:SyntasticRegistryInstance = copy(self)
+                                    let s:SyntasticRegistryInstance._checkerMap = {}
+                                endif
+                            
+    2              0.000003     return s:SyntasticRegistryInstance
+
+FUNCTION  83()
+Called 2 times
+Total time:   0.000721
+ Self time:   0.000252
+
+count  total (s)   self (s)
+    2   0.000070   0.000009     let ftlist = self.resolveFiletypes(a:ftalias)
+                            
+    2              0.000013     let names = !empty(a:hints_list) ? a:hints_list : exists('b:syntastic_checkers') ? b:syntastic_checkers : []
+                            
+    2              0.000002     let cnames = []
+    2              0.000004     if !empty(names)
+                                    for name in names
+                                        if name !~# '/'
+                                            for ft in ftlist
+                                                call add(cnames, ft . '/' . name)
+                                            endfor
+                                        else
+                                            call add(cnames, name)
+                                        endif
+                                    endfor
+                                else
+    4              0.000006         for ft in ftlist
+    2   0.000063   0.000011             call self._sanityCheck(ft)
+    2              0.000019             let defs = exists('g:syntastic_' . ft . '_checkers') ? g:syntastic_{ft}_checkers : get(s:_DEFAULT_CHECKERS, ft, [])
+    2              0.000039             call extend(cnames, map(copy(defs), 'stridx(v:val, "/") < 0 ? ft . "/" . v:val : v:val' ))
+    2              0.000002         endfor
+    2              0.000002     endif
+    2   0.000112   0.000014     let cnames = syntastic#util#unique(cnames)
+                            
+    4   0.000121   0.000041     for ft in syntastic#util#unique(map( copy(cnames), 'v:val[: stridx(v:val, "/")-1]' ))
+    2   0.000021   0.000012         call self._loadCheckersFor(ft, 0)
+    2              0.000008     endfor
+                            
+    2   0.000180   0.000011     return self._filterCheckersByName(cnames)
+
+FUNCTION  <SNR>21__translate()
+Called 4 times
+Total time:   0.000031
+ Self time:   0.000031
+
+count  total (s)   self (s)
+    4              0.000029     return 'get(v:val, ' . string(a:key) . ', "") ==? ' . string(a:val)
+
+FUNCTION  88()
+Called 4 times
+Total time:   0.000153
+ Self time:   0.000090
+
+count  total (s)   self (s)
+    4   0.000152   0.000089     return map(split( get(g:syntastic_filetype_map, a:ftalias, a:ftalias), '\m\.' ), 's:_normalise_filetype(v:val)')
+
+FUNCTION  syntastic#util#system()
+Called 3 times
+Total time:   6.530849
+ Self time:   0.002177
+
+count  total (s)   self (s)
+    3              0.000006     let old_shell = &shell
+    3              0.000009     let old_lc_messages = $LC_MESSAGES
+    3              0.000006     let old_lc_all = $LC_ALL
+                            
+    3   0.000106   0.000020     let &shell = syntastic#util#var('shell')
+    3              0.000007     let $LC_MESSAGES = 'C'
+    3              0.000006     let $LC_ALL = ''
+                            
+    3              0.000005     let crashed = 0
+    3              0.000008     let cmd_start = reltime()
+    3              0.000003     try
+    3   6.529805   0.001352         let out = system(a:command)
+    3              0.000030     catch
+                                    let crashed = 1
+                                    call syntastic#log#error('exception running system(' . string(a:command) . '): ' . v:exception)
+                                    if syntastic#util#isRunningWindows()
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TMP = ' . string($TMP) . ', $TEMP = ' . string($TEMP))
+                                    else
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TERM = ' . string($TERM))
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_CHECKERS, '$TMPDIR = ' . string($TMPDIR))
+                                    endif
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, '$PATH = ' . string($PATH))
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'getcwd() = ' . string(getcwd()))
+                                    call syntastic#log#debugShowOptions(g:_SYNTASTIC_DEBUG_TRACE, g:_SYNTASTIC_SHELL_OPTIONS)
+                                    let out = ''
+                                endtry
+    3              0.000256     let cmd_time = split(reltimestr(reltime(cmd_start)))[0]
+                            
+    3              0.000026     let $LC_ALL = old_lc_all
+    3              0.000009     let $LC_MESSAGES = old_lc_messages
+                            
+    3              0.000060     let &shell = old_shell
+                            
+    3              0.000018     if !crashed && exists('g:_SYNTASTIC_DEBUG_TRACE')
+    3   0.000206   0.000073         call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'system: command run in ' . cmd_time . 's')
+    3              0.000002     endif
+                            
+    3              0.000007     return out
+
+FUNCTION  <SNR>85_SearchParensPair()
+Called 12 times
+Total time:   1.061439
+ Self time:   1.061439
+
+count  total (s)   self (s)
+   12              0.000041     let line = line('.')
+   12              0.000028     let col = col('.')
+                                
+                                " Skip strings and comments and don't look too far
+   12              0.000085     let skip = "line('.') < " . (line - s:maxoff) . " ? dummy :" . 'synIDattr(synID(line("."), col("."), 0), "name") =~? ' . '"string\\|comment"'
+                            
+                                " Search for parentheses
+   12              0.000050     call cursor(line, col)
+   12              0.570279     let parlnum = searchpair('(', '', ')', 'bW', skip)
+   12              0.000076     let parcol = col('.')
+                            
+                                " Search for brackets
+   12              0.000057     call cursor(line, col)
+   12              0.443347     let par2lnum = searchpair('\[', '', '\]', 'bW', skip)
+   12              0.000076     let par2col = col('.')
+                            
+                                " Search for braces
+   12              0.000054     call cursor(line, col)
+   12              0.046909     let par3lnum = searchpair('{', '', '}', 'bW', skip)
+   12              0.000051     let par3col = col('.')
+                            
+                                " Get the closest match
+   12              0.000041     if par2lnum > parlnum || (par2lnum == parlnum && par2col > parcol)
+                                    let parlnum = par2lnum
+                                    let parcol = par2col
+                                endif
+   12              0.000027     if par3lnum > parlnum || (par3lnum == parlnum && par3col > parcol)
+                                    let parlnum = par3lnum
+                                    let parcol = par3col
+                                endif 
+                            
+                                " Put the cursor on the match
+   12              0.000014     if parlnum > 0
+                                    call cursor(parlnum, parcol)
+                                endif
+   12              0.000020     return parlnum
+
+FUNCTION  91()
+Called 6 times
+Total time:   0.000107
+ Self time:   0.000107
+
+count  total (s)   self (s)
+    6              0.000020     let sep_idx = stridx(a:cname, '/')
+    6              0.000007     if sep_idx > 0
+    6              0.000016         let ft = a:cname[: sep_idx-1]
+    6              0.000014         let name = a:cname[sep_idx+1 :]
+    6              0.000005     else
+                                    let ft = &filetype
+                                    let name = a:cname
+                                endif
+    6              0.000028     return get(self._checkerMap[ft], name, {})
+
+FUNCTION  92()
+Called 2 times
+Total time:   0.000169
+ Self time:   0.000062
+
+count  total (s)   self (s)
+    2   0.000168   0.000061     return filter( map(copy(a:cnames), 'self._findChecker(v:val)'), '!empty(v:val)' )
+
+FUNCTION  93()
+Called 2 times
+Total time:   0.000009
+ Self time:   0.000009
+
+count  total (s)   self (s)
+    2              0.000007     if !a:force && has_key(self._checkerMap, a:filetype)
+    2              0.000002         return
+                                endif
+                            
+                                execute 'runtime! syntax_checkers/' . a:filetype . '/*.vim'
+                            
+                                if !has_key(self._checkerMap, a:filetype)
+                                    let self._checkerMap[a:filetype] = {}
+                                endif
+
+FUNCTION  94()
+Called 2 times
+Total time:   0.000052
+ Self time:   0.000052
+
+count  total (s)   self (s)
+    2              0.000014     if exists('g:syntastic_' . a:filetype . '_checkers') && type(g:syntastic_{a:filetype}_checkers) != type([])
+                            
+                                    unlet! g:syntastic_{a:filetype}_checkers
+                                    call syntastic#log#error('variable g:syntastic_' . a:filetype . '_checkers has to be a list of strings')
+                                endif
+                            
+    2              0.000014     if exists('g:syntastic_' . a:filetype . '_checker') && !exists('g:syntastic_' . a:filetype . '_checkers') && type(g:syntastic_{a:filetype}_checker) == type('')
+                            
+                                    let g:syntastic_{a:filetype}_checkers = [g:syntastic_{a:filetype}_checker]
+                                    call syntastic#log#oneTimeWarn('variable g:syntastic_' . a:filetype . '_checker is deprecated')
+                                endif
+
+FUNCTION  96()
+Called 4 times
+Total time:   0.000091
+ Self time:   0.000031
+
+count  total (s)   self (s)
+    4   0.000088   0.000028     return has('signs') && syntastic#util#var('enable_signs')
+
+FUNCTION  97()
+Called 2 times
+Total time:   0.741881
+ Self time:   0.000213
+
+count  total (s)   self (s)
+    2   0.000029   0.000011     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_NOTIFICATIONS, 'signs: refresh')
+                            
+    2   0.000061   0.000041     let old_signs = copy(self._bufSignIds())
+    2   0.000057   0.000007     if self.enabled()
+    2              0.000004         if !s:setup_done
+                                        call self._setup()
+                                        let s:setup_done = 1
+                                        lockvar s:setup_done
+                                    endif
+                            
+    2   0.363210   0.000105         call self._signErrors(a:loclist)
+    2              0.000002     endif
+    2   0.378505   0.000030     call self._removeSigns(old_signs)
+
+FUNCTION  99()
+Called 2 times
+Total time:   0.363105
+ Self time:   0.361394
+
+count  total (s)   self (s)
+    2              0.000004     let loclist = a:loclist
+    2   0.000020   0.000014     if !loclist.isEmpty()
+                            
+    2              0.000004         let buf = bufnr('')
+    2              0.000006         if !bufloaded(buf)
+                                        " signs can be placed only in loaded buffers
+                                        return
+                                    endif
+                            
+                                    " errors come first, so that they are not masked by warnings
+    2   0.000395   0.000014         let issues = copy(loclist.errors())
+    2   0.000393   0.000027         call extend(issues, loclist.warnings())
+    2              0.000083         call filter(issues, 'v:val["bufnr"] == buf')
+    2              0.000004         let seen = {}
+                            
+  118              0.000155         for i in issues
+  116              0.000633             if i['lnum'] > 0 && !has_key(seen, i['lnum'])
+   73              0.000308                 let seen[i['lnum']] = 1
+                            
+   73              0.000311                 let sign_severity = i['type'] ==? 'W' ? 'Warning' : 'Error'
+   73              0.000316                 let sign_subtype = get(i, 'subtype', '')
+   73              0.000275                 let sign_type = 'Syntastic' . sign_subtype . sign_severity
+                            
+   73              0.356974                 execute 'sign place ' . s:next_sign_id . ' line=' . i['lnum'] . ' name=' . sign_type . ' buffer=' . i['bufnr']
+   73   0.001832   0.000874                 call add(self._bufSignIds(), s:next_sign_id)
+   73              0.000219                 let s:next_sign_id += 1
+   73              0.000075             endif
+  116              0.000139         endfor
+    2              0.000002     endif
+
+FUNCTION  <SNR>24__normalise_filetype()
+Called 4 times
+Total time:   0.000063
+ Self time:   0.000063
+
+count  total (s)   self (s)
+    4              0.000020     let ft = get(s:_DEFAULT_FILETYPE_MAP, a:ftalias, a:ftalias)
+    4              0.000013     let ft = get(g:syntastic_filetype_map, ft, ft)
+    4              0.000020     let ft = substitute(ft, '\m-', '_', 'g')
+    4              0.000005     return ft
+
+FUNCTION  syntastic#util#getbufvar()
+Called 4 times
+Total time:   0.000028
+ Self time:   0.000028
+
+count  total (s)   self (s)
+    4              0.000025     return a:0 ? s:_getbufvar(a:buf, a:name, a:1) : getbufvar(a:buf, a:name)
+
+FUNCTION  <SNR>21__set_screen_column()
+Called 182 times
+Total time:   0.007306
+ Self time:   0.005646
+
+count  total (s)   self (s)
+  182              0.000560     if !has_key(a:item, 'scol')
+  115              0.000243         let col = get(a:item, 'col', 0)
+  115              0.000250         if col != 0 && get(a:item, 'vcol', 0) == 0
+  115              0.000292             let buf = str2nr(a:item['bufnr'])
+  115              0.000085             try
+  115              0.000430                 let line = getbufline(buf, a:item['lnum'])[0]
+  115              0.000114             catch  /\m^Vim\%((\a\+)\)\=:E684/
+                                            let line = ''
+                                        endtry
+  115   0.002637   0.000977             let a:item['scol'] = syntastic#util#screenWidth(strpart(line, 0, col), getbufvar(buf, '&tabstop'))
+  115              0.000083         else
+                                        let a:item['scol'] = col
+                                    endif
+  115              0.000067     endif
+
+FUNCTION  <SNR>19__is_same_index()
+Called 26 times
+Total time:   0.000526
+ Self time:   0.000526
+
+count  total (s)   self (s)
+   26              0.000083     if a:old_line >= 0 && a:line == a:old_line && a:idx >= 0
+    1              0.000002         if len(a:messages) <= 1
+    1              0.000001             return 1
+                                    endif
+                            
+                                    if a:messages[a:idx].scol <= a:column || a:idx == 0
+                                        if a:idx == len(a:messages) - 1 || a:column < a:messages[a:idx + 1].scol
+                                            return 1
+                                        else
+                                            return 0
+                                        endif
+                                    else
+                                        return 0
+                                    endif
+                                else
+   25              0.000025         return 0
+                                endif
+
+FUNCTION  syntastic#util#isRunningWindows()
+Called 5 times
+Total time:   0.000049
+ Self time:   0.000049
+
+count  total (s)   self (s)
+    5              0.000045     return has('win16') || has('win32') || has('win64')
+
+FUNCTION  <SNR>77_OnTextChangedInsertMode()
+Called 68 times
+Total time:   0.204707
+ Self time:   0.016032
+
+count  total (s)   self (s)
+   68   0.004289   0.000393   if !s:AllowedToCompleteInCurrentBuffer()
+                                return
+                              endif
+                            
+   68              0.000090   if s:completion_stopped
+                                let s:completion_stopped = 0
+                                let s:completion = s:default_completion
+                                return
+                              endif
+                            
+   68   0.039915   0.000396   call s:IdentifierFinishedOperations()
+                            
+                              " We have to make sure we correctly leave semantic mode even when the user
+                              " inserts something like a "operator[]" candidate string which fails
+                              " CurrentIdentifierFinished check.
+   68              0.000309   if s:force_semantic && !s:Pyeval( 'base.LastEnteredCharIsIdentifierChar()' )
+                                let s:force_semantic = 0
+                              endif
+                            
+   68   0.019258   0.001151   if &completefunc == "youcompleteme#CompleteFunc" && ( g:ycm_auto_trigger || s:force_semantic ) && !s:InsideCommentOrStringAndShouldStop() && !s:OnBlankLine()
+                                " Immediately call previous completion to avoid flickers.
+   63   0.002271   0.000466     call s:Complete()
+   63   0.125675   0.000327     call s:InvokeCompletion()
+   63              0.000059   endif
+                            
+   68              0.010926   exec s:python_command "ycm_state.OnCursorMoved()"
+                            
+   68              0.000276   if g:ycm_autoclose_preview_window_after_completion
+                                call s:ClosePreviewWindowIfNeeded()
+                              endif
+
+FUNCTION  23()
+Called 4 times
+Total time:   0.000421
+ Self time:   0.000092
+
+count  total (s)   self (s)
+    4   0.000351   0.000022     call self.syncExec()
+                            
+    4              0.000012     if !has_key(self, '_available')
+                                    let self._available = {}
+                                endif
+    4              0.000016     if !has_key(self._available, self._exec)
+                                    let self._available[self._exec] = self._isAvailableFunc()
+                                endif
+                            
+    4              0.000007     return self._available[self._exec]
+
+FUNCTION  AutoPairsReturn()
+Called 4 times
+Total time:   0.000266
+ Self time:   0.000266
+
+count  total (s)   self (s)
+    4              0.000016   if b:autopairs_enabled == 0
+                                return ''
+                              end
+    4              0.000017   let line = getline('.')
+    4              0.000042   let pline = getline(line('.')-1)
+    4              0.000039   let prev_char = pline[strlen(pline)-1]
+    4              0.000005   let cmd = ''
+    4              0.000014   let cur_char = line[col('.')-1]
+    4              0.000018   if has_key(b:AutoPairs, prev_char) && b:AutoPairs[prev_char] == cur_char
+                                if g:AutoPairsCenterLine && winline() * 3 >= winheight(0) * 2
+                                  " Recenter before adding new line to avoid replacing line content
+                                  let cmd = "zz"
+                                end
+                            
+                                " If equalprg has been set, then avoid call =
+                                " https://github.com/jiangmiao/auto-pairs/issues/24
+                                if &equalprg != ''
+                                  return "\<ESC>".cmd."O"
+                                endif
+                            
+                                " conflict with javascript and coffee
+                                " javascript   need   indent new line
+                                " coffeescript forbid indent new line
+                                if &filetype == 'coffeescript' || &filetype == 'coffee'
+                                  return "\<ESC>".cmd."k==o"
+                                else
+                                  return "\<ESC>".cmd."=ko"
+                                endif
+                              end
+    4              0.000003   return ''
+
+FUNCTION  syntastic#util#var()
+Called 57 times
+Total time:   0.001085
+ Self time:   0.000597
+
+count  total (s)   self (s)
+   57   0.001047   0.000559     return call('syntastic#util#rawVar', ['syntastic_' . a:name] + a:000)
+
+FUNCTION  <SNR>77_CloseCompletionMenu()
+Called 157 times
+Total time:   0.001511
+ Self time:   0.001258
+
+count  total (s)   self (s)
+  157              0.000451   if pumvisible()
+   18   0.000389   0.000136     call s:SendKeys( "\<C-e>" )
+   18              0.000032   endif
+
+FUNCTION  syntastic#util#compareLexi()
+Called 4 times
+Total time:   0.000089
+ Self time:   0.000089
+
+count  total (s)   self (s)
+    4              0.000027     for idx in range(max([len(a:a), len(a:b)]))
+    4              0.000018         let a_element = str2nr(get(a:a, idx, 0))
+    4              0.000014         let b_element = str2nr(get(a:b, idx, 0))
+    4              0.000007         if a_element != b_element
+    4              0.000013             return a_element > b_element ? 1 : -1
+                                    endif
+                                endfor
+                                " still here, thus everything matched
+                                return 0
+
+FUNCTION  <SNR>77_OnCursorMovedNormalMode()
+Called 26 times
+Total time:   0.005283
+ Self time:   0.003600
+
+count  total (s)   self (s)
+   26   0.001854   0.000171   if !s:AllowedToCompleteInCurrentBuffer()
+                                return
+                              endif
+                            
+   26              0.003345   exec s:python_command "ycm_state.OnCursorMoved()"
+
+FUNCTION  syntastic#log#debugShowVariables()
+Called 4 times
+Total time:   0.000046
+ Self time:   0.000032
+
+count  total (s)   self (s)
+    4   0.000033   0.000019     if !s:_isDebugEnabled(a:level)
+    4              0.000004         return
+                                endif
+                            
+                                let leader = s:_log_timestamp()
+                                call s:_logRedirect(1)
+                            
+                                let vlist = type(a:names) == type('') ? [a:names] : a:names
+                                for name in vlist
+                                    let msg = s:_format_variable(name)
+                                    if msg !=# ''
+                                        echomsg leader . msg
+                                    endif
+                                endfor
+                            
+                                call s:_logRedirect(0)
+
+FUNCTION  <SNR>77_IdentifierFinishedOperations()
+Called 68 times
+Total time:   0.039519
+ Self time:   0.023846
+
+count  total (s)   self (s)
+   68   0.016057   0.000384   if !s:Pyeval( 'base.CurrentIdentifierFinished()' )
+   52              0.000082     return
+                              endif
+   16              0.023051   exec s:python_command "ycm_state.OnCurrentIdentifierFinished()"
+   16              0.000135   let s:force_semantic = 0
+   16              0.000080   let s:completion = s:default_completion
+
+FUNCTION  <SNR>83_indent_spaces()
+Called 5 times
+Total time:   0.000049
+ Self time:   0.000049
+
+count  total (s)   self (s)
+    5              0.000031     if &softtabstop > 0
+    5              0.000011         return &softtabstop
+                                elseif &softtabstop < 0 && &shiftwidth > 0
+                                    return &shiftwidth
+                                endif
+                                return &tabstop
+
+FUNCTION  GetPythonIndent()
+Called 6 times
+Total time:   1.062689
+ Self time:   0.001067
+
+count  total (s)   self (s)
+                            
+                                " First line has indent 0
+    6              0.000010     if a:lnum == 1
+                                    return 0
+                                endif
+                                
+                                " If we can find an open parenthesis/bracket/brace, line up with it.
+    6              0.000024     call cursor(a:lnum, 1)
+    6   0.529548   0.000094     let parlnum = s:SearchParensPair()
+    6              0.000006     if parlnum > 0
+                                    let parcol = col('.')
+                                    let closing_paren = match(getline(a:lnum), '^\s*[])}]') != -1
+                                    if match(getline(parlnum), '[([{]\s*$', parcol - 1) != -1
+                                        if closing_paren
+                                            return indent(parlnum)
+                                        else
+                                            return indent(parlnum) + &shiftwidth
+                                        endif
+                                    else
+                                        if closing_paren
+                                            return parcol - 1
+                                        else
+                                            return parcol
+                                        endif
+                                    endif
+                                endif
+                                
+                                " Examine this line
+    6              0.000023     let thisline = getline(a:lnum)
+    6              0.000017     let thisindent = indent(a:lnum)
+                            
+                                " If the line starts with 'elif' or 'else', line up with 'if' or 'elif'
+    6              0.000075     if thisline =~ '^\s*\(elif\|else\)\>'
+                                    let bslnum = s:BlockStarter(a:lnum, '^\s*\(if\|elif\)\>')
+                                    if bslnum > 0
+                                        return indent(bslnum)
+                                    else
+                                        return -1
+                                    endif
+                                endif
+                                    
+                                " If the line starts with 'except' or 'finally', line up with 'try'
+                                " or 'except'
+    6              0.000058     if thisline =~ '^\s*\(except\|finally\)\>'
+                                    let bslnum = s:BlockStarter(a:lnum, '^\s*\(try\|except\)\>')
+                                    if bslnum > 0
+                                        return indent(bslnum)
+                                    else
+                                        return -1
+                                    endif
+                                endif
+                                
+                                " Examine previous line
+    6              0.000018     let plnum = a:lnum - 1
+    6              0.000013     let pline = getline(plnum)
+    6   0.532247   0.000079     let sslnum = s:StatementStart(plnum)
+                                
+                                " If the previous line is blank, keep the same indentation
+    6              0.000062     if pline =~ '^\s*$'
+                                    return -1
+                                endif
+                                
+                                " If this line is explicitly joined, try to find an indentation that looks
+                                " good. 
+    6              0.000020     if pline =~ '\\$'
+                                    let compound_statement = '^\s*\(if\|while\|for\s.*\sin\|except\)\s*'
+                                    let maybe_indent = matchend(getline(sslnum), compound_statement)
+                                    if maybe_indent != -1
+                                        return maybe_indent
+                                    else
+                                        return indent(sslnum) + &sw * 2
+                                    endif
+                                endif
+                                
+                                " If the previous line ended with a colon, indent relative to
+                                " statement start.
+    6              0.000018     if pline =~ ':\s*$'
+    1              0.000009         return indent(sslnum) + &sw
+                                endif
+                            
+                                " If the previous line was a stop-execution statement or a pass
+    5              0.000084     if getline(sslnum) =~ '^\s*\(break\|continue\|raise\|return\|pass\)\>'
+                                    " See if the user has already dedented
+                                    if indent(a:lnum) > indent(sslnum) - &sw
+                                        " If not, recommend one dedent
+                                        return indent(sslnum) - &sw
+                                    endif
+                                    " Otherwise, trust the user
+                                    return -1
+                                endif
+                            
+                                " In all other cases, line up with the start of the previous statement.
+    5              0.000013     return indent(sslnum)
+
+FUNCTION  <SNR>77_OnCompleteDone()
+Called 31 times
+Total time:   0.005491
+ Self time:   0.005491
+
+count  total (s)   self (s)
+   31              0.005462   exec s:python_command "ycm_state.OnCompleteDone()"
+
+FUNCTION  <SNR>83_defs_stack_prune()
+Called 5 times
+Total time:   0.000137
+ Self time:   0.000137
+
+count  total (s)   self (s)
+   10              0.000029     for idx in range(len(a:defs_stack))
+   10              0.000036         let ind_stack = a:cache[(a:defs_stack[idx])]['indent']
+   10              0.000013         if a:ind == ind_stack
+    5              0.000011             return a:defs_stack[(idx + 1):]
+                                    elseif a:ind > ind_stack
+                                        return a:defs_stack[(idx):]
+                                    endif
+    5              0.000009     endfor
+                                return []
+
+FUNCTION  <SNR>77_OnTextChangedNormalMode()
+Called 4 times
+Total time:   0.014288
+ Self time:   0.000089
+
+count  total (s)   self (s)
+    4   0.000283   0.000024   if !s:AllowedToCompleteInCurrentBuffer()
+                                return
+                              endif
+                            
+    4   0.013991   0.000051   call s:OnFileReadyToParse()
+
+FUNCTION  <SNR>26_ClearCache()
+Called 2 times
+Total time:   0.003211
+ Self time:   0.000044
+
+count  total (s)   self (s)
+    2   0.000094   0.000021     let loclist = g:SyntasticLoclist.current(a:buf)
+    2   0.001746   0.000012     call s:notifiers.reset(loclist)
+    2   0.001371   0.000011     call loclist.destroy()
+
+FUNCTION  <SNR>77_Pyeval()
+Called 343 times
+Total time:   0.090677
+ Self time:   0.090677
+
+count  total (s)   self (s)
+  343              0.000797   if s:using_python3
+                                return py3eval( a:eval_string )
+                              endif
+  343              0.087801   return pyeval( a:eval_string )
+
+FUNCTION  <SNR>77_DisableOnLargeFile()
+Called 99 times
+Total time:   0.000609
+ Self time:   0.000609
+
+count  total (s)   self (s)
+   99              0.000358   if exists( 'b:ycm_largefile' )
+   99              0.000153     return b:ycm_largefile
+                              endif
+                            
+                              let threshold = g:ycm_disable_for_files_larger_than_kb * 1024
+                              let b:ycm_largefile = threshold > 0 && getfsize( expand( a:buffer ) ) > threshold
+                              if b:ycm_largefile
+                                exec s:python_command "vimsupport.PostVimMessage(" . "'YouCompleteMe is disabled in this buffer; " . "the file exceeded the max size (see YCM options).' )"
+                              endif
+                              return b:ycm_largefile
+
+FUNCTION  <SNR>19__find_index()
+Called 9 times
+Total time:   0.000066
+ Self time:   0.000066
+
+count  total (s)   self (s)
+    9              0.000037     let max = len(a:messages) - 1
+    9              0.000012     if max == 0
+    9              0.000007         return 0
+                                endif
+                                let min = 0
+                            
+                                " modified binary search: assign index 0 to columns to the left of the first error
+                                while min < max - 1
+                                    let mid = (min + max) / 2
+                                    if a:column < a:messages[mid].scol
+                                        let max = mid
+                                    else
+                                        let min = mid
+                                    endif
+                                endwhile
+                            
+                                return a:column < a:messages[max].scol ? min : max
+
+FUNCTION  <SNR>26__skip_file()
+Called 4 times
+Total time:   0.000509
+ Self time:   0.000344
+
+count  total (s)   self (s)
+    4              0.000016     let fname = bufname(a:buf)
+    4   0.000466   0.000301     let skip = s:_is_quitting(a:buf) || getbufvar(a:buf, 'syntastic_skip_checks') || (getbufvar(a:buf, '&buftype') !=# '') || !filereadable(fname) || getwinvar(0, '&diff') || getwinvar(0, '&previewwindow') || s:_ignore_file(fname) || fnamemodify(fname, ':e') =~? g:syntastic_ignore_extensions
+    4              0.000005     if skip
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, '_skip_file: skipping checks')
+                                endif
+    4              0.000004     return skip
+
+FUNCTION  UltiSnips#TrackChange()
+Called 137 times
+Total time:   0.033692
+ Self time:   0.033692
+
+count  total (s)   self (s)
+  137              0.033475     exec g:_uspy "UltiSnips_Manager._track_change()"
+
+FUNCTION  syntastic#util#bufIsActive()
+Called 2 times
+Total time:   0.000063
+ Self time:   0.000063
+
+count  total (s)   self (s)
+                                " convert to number, or hell breaks loose
+    2              0.000008     let buf = str2nr(a:buffer)
+                            
+    2              0.000008     if !bufloaded(buf) || !buflisted(buf)
+                                    return 0
+                                endif
+                            
+                                " get rid of hidden buffers
+    4              0.000012     for tab in range(1, tabpagenr('$'))
+    4              0.000017         if index(tabpagebuflist(tab), buf) >= 0
+    2              0.000001             return 1
+                                    endif
+    2              0.000001     endfor
+                            
+                                return 0
+
+FUNCTION  39()
+Called 4 times
+Total time:   0.001180
+ Self time:   0.001180
+
+count  total (s)   self (s)
+  124              0.000352     for match in getmatches()
+  120              0.000293         if stridx(match['group'], 'Syntastic') == 0
+  116              0.000280             call matchdelete(match['id'])
+  116              0.000074         endif
+  120              0.000096     endfor
+
+FUNCTION  <SNR>77_InsideCommentOrString()
+Called 68 times
+Total time:   0.009953
+ Self time:   0.009953
+
+count  total (s)   self (s)
+                              " Has to be col('.') -1 because col('.') doesn't exist at this point. We are
+                              " in insert mode when this func is called.
+   68              0.008960   let syntax_group = synIDattr( synIDtrans( synID( line( '.' ), col( '.' ) - 1, 1 ) ), 'name')
+                            
+   68              0.000270   if stridx(syntax_group, 'Comment') > -1
+                                return 1
+                              endif
+                            
+   68              0.000175   if stridx(syntax_group, 'String') > -1
+   12              0.000012     return 2
+                              endif
+                            
+   56              0.000051   return 0
+
+FUNCTION  SyntaxCheckers_python_python_GetLocList()
+Called 2 times
+Total time:   0.150080
+ Self time:   0.000262
+
+count  total (s)   self (s)
+    2              0.000008     let compiler = s:base_path . (g:syntastic_python_python_use_codec ? 'codec.py' : 'compile.py')
+    2   0.000068   0.000012     call self.log('using compiler script', compiler)
+    2   0.001318   0.000032     let makeprg = self.makeprgBuild({ 'exe': [self.getExec(), compiler] })
+                            
+    2              0.000004     let errorformat = '%E%f:%l:%c: %m'
+                            
+    2   0.000029   0.000012     let env = syntastic#util#isRunningWindows() ? {} : { 'TERM': 'dumb' }
+                            
+    2   0.148642   0.000183     return SyntasticMake({ 'makeprg': makeprg, 'errorformat': errorformat, 'env': env, 'returns': [0] })
+
+FUNCTION  <SNR>77_OnBlankLine()
+Called 68 times
+Total time:   0.006949
+ Self time:   0.000515
+
+count  total (s)   self (s)
+   68   0.006927   0.000493   return s:Pyeval( 'not vim.current.line or vim.current.line.isspace()' )
+
+FUNCTION  <SNR>77_AllowedToCompleteInCurrentBuffer()
+Called 99 times
+Total time:   0.006042
+ Self time:   0.000746
+
+count  total (s)   self (s)
+   99   0.005995   0.000699   return s:AllowedToCompleteInBuffer( '%' )
+
+FUNCTION  <SNR>83_multi_string()
+Called 1087 times
+Total time:   0.313803
+ Self time:   0.177600
+
+count  total (s)   self (s)
+                                " 2x performance for general case
+ 1087              0.023844     if a:line !~# '[''"]'
+  430              0.001714         return [a:in_string, 0, 0, '', '']
+                                endif
+                            
+  657   0.079630   0.006587     let string_match = s:matchstrpos(a:line, a:first_re)
+  657              0.002882     if string_match[1] == -1
+                                    return [a:in_string, 0, 0, '', '']
+                                endif
+                            
+                                " Anything before first match?
+  657              0.001613     if string_match[1] >= 1
+  657              0.003410         let before_first = a:line[:(string_match[1] - 1)]
+  657              0.000778     else
+                                    let before_first = ''
+                                endif
+                            
+  657              0.001841     let in_string = a:in_string
+  657              0.001308     let next_re = ''
+  657              0.001387     let line_slice = a:line
+  657              0.001247     let found_ends = 0
+ 2291              0.007806     while string_match[1] != -1
+ 1754              0.002568         if in_string
+  877              0.001464             let in_string = 0
+  877              0.001673             let found_ends += 1
+  877              0.002304             let next_re = s:string_start_re
+  877              0.000932         else
+  877              0.001676             let in_string = 1
+  877              0.014096             let quotes = string_match[0][matchend(string_match[0], s:string_prefix_re):]
+  877              0.003493             let next_re = '\\\@<!' . quotes
+  877              0.000982         endif
+                            
+ 1754              0.007971         let line_slice = line_slice[(string_match[2]):]
+ 1754              0.005676         if empty(line_slice)
+  120              0.000147             break
+                                    endif
+ 1634   0.079494   0.016334         let string_match = s:matchstrpos(line_slice, next_re)
+ 1634              0.003523     endwhile
+                            
+  657              0.001086     if in_string
+                                    " Check if in single quoted string and line continues
+                                    let single_quoted = quotes =~# '^[''"]$'
+                                    if single_quoted && line_slice !~# s:line_cont_re
+                                        return [0, single_quoted, (found_ends >= 1), '', before_first]
+                                    else
+                                        return [1, single_quoted, (found_ends >= 1), next_re, before_first]
+                                    endif
+                                else
+  657              0.002796         return [0, 0, (found_ends >= 2), '', before_first]
+                                endif
+
+FUNCTION  syntastic#util#screenWidth()
+Called 115 times
+Total time:   0.001660
+ Self time:   0.001660
+
+count  total (s)   self (s)
+  115              0.000473     let chunks = split(a:str, "\t", 1)
+  115              0.000295     let width = s:_width(chunks[-1])
+  115              0.000223     for c in chunks[:-2]
+                                    let cwidth = s:_width(c)
+                                    let width += cwidth + a:tabstop - cwidth % a:tabstop
+                                endfor
+  115              0.000100     return width
+
+FUNCTION  syntastic#log#debugDump()
+Called 2 times
+Total time:   0.000016
+ Self time:   0.000010
+
+count  total (s)   self (s)
+    2   0.000013   0.000007     if !s:_isDebugEnabled(a:level)
+    2              0.000001         return
+                                endif
+                            
+                                call syntastic#log#debugShowVariables( a:level, sort(keys(g:_SYNTASTIC_DEFAULTS)) )
+
+FUNCTION  syntastic#util#wideMsg()
+Called 9 times
+Total time:   0.254244
+ Self time:   0.001287
+
+count  total (s)   self (s)
+    9              0.000027     let old_ruler = &ruler
+    9              0.000017     let old_showcmd = &showcmd
+                            
+                                "This is here because it is possible for some error messages to
+                                "begin with \n which will cause a "press enter" prompt.
+    9              0.000077     let msg = substitute(a:msg, "\n", '', 'g')
+                            
+                                "convert tabs to spaces so that the tabs count towards the window
+                                "width as the proper amount of characters
+    9              0.000051     let chunks = split(msg, "\t", 1)
+    9              0.000094     let msg = join(map(chunks[:-2], 'v:val . repeat(" ", &tabstop - s:_width(v:val) % &tabstop)'), '') . chunks[-1]
+    9              0.000040     let msg = strpart(msg, 0, &columns - 1)
+                            
+    9              0.000083     set noruler noshowcmd
+    9   0.253046   0.000089     call syntastic#util#redraw(0)
+                            
+    9              0.000587     echo msg
+                            
+    9              0.000102     let &ruler = old_ruler
+    9              0.000046     let &showcmd = old_showcmd
+
+FUNCTION  syntastic#util#fname2buf()
+Called 2 times
+Total time:   0.001572
+ Self time:   0.001572
+
+count  total (s)   self (s)
+    2              0.000014     if exists('+shellslash')
+                                    " bufnr() can't cope with backslashes
+                                    let old_shellslash = &shellslash
+                                    let &shellslash = 1
+                                endif
+                            
+                                " this is a best-effort attempt to escape file patterns (cf. :h file-pattern)
+                                " XXX it fails for filenames containing something like \{2,3}
+    2              0.000005     let buf = -1
+    2              0.000008     for md in [':~:.', ':~', ':p']
+    2              0.000003         try
+                                        " Older versions of Vim can throw E94 here
+    2              0.001457             let buf = bufnr('^' . escape(fnamemodify(a:fname, md), '\*?,{}[') . '$')
+    2              0.000006         catch
+                                        " catch everything
+                                    endtry
+    2              0.000005         if buf != -1
+    2              0.000002             break
+                                    endif
+                                endfor
+    2              0.000004     if buf == -1
+                                    " XXX definitely wrong, but hope is the last thing to die :)
+                                    let buf = bufnr(fnamemodify(a:fname, ':p'))
+                                endif
+                            
+    2              0.000006     if exists('+shellslash')
+                                    let &shellslash = old_shellslash
+                                endif
+                            
+    2              0.000004     return buf
+
+FUNCTION  <SNR>77_OnInsertChar()
+Called 69 times
+Total time:   0.001702
+ Self time:   0.000868
+
+count  total (s)   self (s)
+   69              0.000377   call timer_stop( s:pollers.completion.id )
+   69   0.001261   0.000427   call s:CloseCompletionMenu()
+
+FUNCTION  <SNR>77_OnInsertLeave()
+Called 1 time
+Total time:   0.004944
+ Self time:   0.002576
+
+count  total (s)   self (s)
+    1   0.000225   0.000021   if !s:AllowedToCompleteInCurrentBuffer()
+                                return
+                              endif
+                            
+    1              0.000010   call timer_stop( s:pollers.completion.id )
+    1              0.000004   let s:force_semantic = 0
+    1              0.000002   let s:completion = s:default_completion
+                            
+    1   0.002213   0.000049   call s:OnFileReadyToParse()
+    1              0.002466   exec s:python_command "ycm_state.OnInsertLeave()"
+    1              0.000006   if g:ycm_autoclose_preview_window_after_completion || g:ycm_autoclose_preview_window_after_insertion
+                                call s:ClosePreviewWindowIfNeeded()
+                              endif
+
+FUNCTION  <SNR>26__is_quitting()
+Called 4 times
+Total time:   0.000074
+ Self time:   0.000074
+
+count  total (s)   self (s)
+    4              0.000005     let quitting = 0
+    4              0.000012     if exists('w:syntastic_wid')
+                                    let key = a:buf . '_' . getbufvar(a:buf, 'changetick') . '_' . w:syntastic_wid
+                                    let idx = index(s:_quit_pre, key)
+                                    if idx >= 0
+                                        call remove(s:_quit_pre, idx)
+                                        let quitting = 1
+                                    endif
+                                endif
+                            
+    4              0.000007     return quitting
+
+FUNCTION  SimpylFold#FoldExpr()
+Called 863 times
+Total time:   0.851125
+ Self time:   0.009172
+
+count  total (s)   self (s)
+  863              0.002854     if !exists('b:SimpylFold_cache')
+    5   0.842375   0.000422         let b:SimpylFold_cache = s:cache()
+    5              0.000006     endif
+  863              0.002675     return b:SimpylFold_cache[(a:lnum)]['foldexpr']
+
+FUNCTION  SyntasticMake()
+Called 3 times
+Total time:   6.541186
+ Self time:   0.010073
+
+count  total (s)   self (s)
+    3   0.000052   0.000023     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_TRACE, 'SyntasticMake: called with options:', a:options)
+                            
+                                " save options and locale env variables {{{3
+    3              0.000009     let old_local_errorformat = &l:errorformat
+    3              0.000007     let old_errorformat = &errorformat
+    3              0.000107     let old_cwd = getcwd()
+                                " }}}3
+                            
+    3              0.000012     if has_key(a:options, 'errorformat')
+    3              0.000032         let &errorformat = a:options['errorformat']
+    3              0.000016         set errorformat<
+    3              0.000004     endif
+                            
+    3              0.000008     if has_key(a:options, 'cwd')
+                                    execute 'lcd ' . fnameescape(a:options['cwd'])
+                                endif
+                            
+                                " set environment variables {{{3
+    3              0.000006     let env_save = {}
+    3              0.000011     if has_key(a:options, 'env') && len(a:options['env'])
+    6              0.000015         for key in keys(a:options['env'])
+    3              0.000066             if key =~? '\m^[a-z_][a-z0-9_]*$'
+    3              0.000028                 execute 'let env_save[' . string(key) . '] = $' . key
+    3              0.000023                 execute 'let $' . key . ' = ' . string(a:options['env'][key])
+    3              0.000001             endif
+    3              0.000011         endfor
+    3              0.000002     endif
+                                " }}}3
+                            
+    3   6.531443   0.000594     let err_lines = split(syntastic#util#system(a:options['makeprg']), "\n", 1)
+                            
+                                " restore environment variables {{{3
+    3              0.000010     if len(env_save)
+    6              0.000032         for key in keys(env_save)
+    3              0.000062             execute 'let $' . key . ' = ' . string(env_save[key])
+    3              0.000028         endfor
+    3              0.000001     endif
+                                " }}}3
+                            
+    3   0.000071   0.000029     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'checker output:', err_lines)
+                            
+                                " Does it still make sense to go on?
+    3   0.000173   0.000058     let bailout = syntastic#util#var('exit_checks') && has_key(a:options, 'returns') && index(a:options['returns'], v:shell_error) == -1
+                            
+    3              0.000003     if !bailout
+    3              0.000007         if has_key(a:options, 'Preprocess')
+                                        let err_lines = call(a:options['Preprocess'], [err_lines])
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'preprocess (external):', err_lines)
+                                    elseif has_key(a:options, 'preprocess')
+                                        let err_lines = call('syntastic#preprocess#' . a:options['preprocess'], [err_lines])
+                                        call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'preprocess:', err_lines)
+                                    endif
+    3              0.006803         noautocmd lgetexpr err_lines
+                            
+    3              0.001179         let errors = deepcopy(getloclist(0))
+                            
+    3              0.000016         if has_key(a:options, 'cwd')
+                                        execute 'lcd ' . fnameescape(old_cwd)
+                                    endif
+                            
+    3              0.000004         try
+    3              0.000040             silent lolder
+    3              0.000008         catch /\m^Vim\%((\a\+)\)\=:E380/
+                                        " E380: At bottom of quickfix stack
+                                        call setloclist(0, [], 'r')
+                                        try
+                                            " Vim 7.4.2200 or later
+                                            call setloclist(0, [], 'r', { 'title': '' })
+                                        catch /\m^Vim\%((\a\+)\)\=:E\%(118\|731\)/
+                                            " do nothing
+                                        endtry
+                                    catch /\m^Vim\%((\a\+)\)\=:E776/
+                                        " E776: No location list
+                                        " do nothing
+                                    endtry
+    3              0.000003     else
+                                    let errors = []
+                                endif
+                            
+                                " restore options {{{3
+    3              0.000057     let &errorformat = old_errorformat
+    3              0.000072     let &l:errorformat = old_local_errorformat
+                                " }}}3
+                            
+    3   0.000245   0.000206     if !s:_running_windows && (s:_os_name() =~? 'FreeBSD' || s:_os_name() =~? 'OpenBSD')
+                                    call syntastic#util#redraw(g:syntastic_full_redraws)
+                                endif
+                            
+    3              0.000004     if bailout
+                                    call syntastic#log#ndebug(g:_SYNTASTIC_DEBUG_LOCLIST, 'checker output:', err_lines)
+                                    throw 'Syntastic: checker error'
+                                endif
+                            
+    3   0.000062   0.000023     call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'raw loclist:', errors)
+                            
+    3              0.000009     if has_key(a:options, 'defaults')
+                                    call s:_add_to_errors(errors, a:options['defaults'])
+                                endif
+                            
+                                " Add subtype info if present.
+    3              0.000006     if has_key(a:options, 'subtype')
+                                    call s:_add_to_errors(errors, { 'subtype': a:options['subtype'] })
+                                endif
+                            
+    3              0.000015     if has_key(a:options, 'Postprocess') && !empty(a:options['Postprocess'])
+                                    for rule in a:options['Postprocess']
+                                        let errors = call(rule, [errors])
+                                    endfor
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'postprocess (external):', errors)
+                                elseif has_key(a:options, 'postprocess') && !empty(a:options['postprocess'])
+                                    for rule in a:options['postprocess']
+                                        let errors = call('syntastic#postprocess#' . rule, [errors])
+                                    endfor
+                                    call syntastic#log#debug(g:_SYNTASTIC_DEBUG_LOCLIST, 'postprocess:', errors)
+                                endif
+                            
+    3              0.000013     return errors
+
+FUNCTION  <SNR>77_AllowedToCompleteInBuffer()
+Called 99 times
+Total time:   0.005296
+ Self time:   0.004687
+
+count  total (s)   self (s)
+   99              0.000654   let buffer_filetype = getbufvar( a:buffer, '&filetype' )
+                            
+   99              0.000751   if empty( buffer_filetype ) || getbufvar( a:buffer, '&buftype' ) ==# 'nofile' || buffer_filetype ==# 'qf'
+                                return 0
+                              endif
+                            
+   99   0.001154   0.000545   if s:DisableOnLargeFile( a:buffer )
+                                return 0
+                              endif
+                            
+   99              0.000618   let whitelist_allows = has_key( g:ycm_filetype_whitelist, '*' ) || has_key( g:ycm_filetype_whitelist, buffer_filetype )
+   99              0.000379   let blacklist_allows = !has_key( g:ycm_filetype_blacklist, buffer_filetype )
+                            
+   99              0.000214   let allowed = whitelist_allows && blacklist_allows
+   99              0.000104   if allowed
+   99              0.000431     let s:previous_allowed_buffer_number = bufnr( a:buffer )
+   99              0.000072   endif
+   99              0.000112   return allowed
+
+FUNCTION  syntastic#util#unique()
+Called 12 times
+Total time:   0.002304
+ Self time:   0.002304
+
+count  total (s)   self (s)
+   12              0.000032     let seen = {}
+   12              0.000024     let uniques = []
+  268              0.000243     for e in a:list
+  256              0.000488         let k = string(e)
+  256              0.000418         if !has_key(seen, k)
+   16              0.000030             let seen[k] = 1
+   16              0.000043             call add(uniques, e)
+   16              0.000011         endif
+  256              0.000154     endfor
+   12              0.000013     return uniques
+
+FUNCTION  youcompleteme#CompleteFunc()
+Called 62 times
+Total time:   0.000526
+ Self time:   0.000526
+
+count  total (s)   self (s)
+   62              0.000157   if a:findstart
+   31              0.000160     return s:completion.start_column - 1
+                              endif
+   31              0.000053   return s:completion.candidates
+
+FUNCTION  syntastic#util#setLastTick()
+Called 2 times
+Total time:   0.000015
+ Self time:   0.000015
+
+count  total (s)   self (s)
+    2              0.000014     call setbufvar(a:buf, 'syntastic_lasttick', getbufvar(a:buf, 'changedtick'))
+
+FUNCTION  AutoPairsInsert()
+Called 6 times
+Total time:   0.001215
+ Self time:   0.001215
+
+count  total (s)   self (s)
+    6              0.000051   if !b:autopairs_enabled
+                                return a:key
+                              end
+                            
+    6              0.000063   let line = getline('.')
+    6              0.000043   let pos = col('.') - 1
+    6              0.000032   let before = strpart(line, 0, pos)
+    6              0.000036   let after = strpart(line, pos)
+    6              0.000126   let next_chars = split(after, '\zs')
+    6              0.000030   let current_char = get(next_chars, 0, '')
+    6              0.000018   let next_char = get(next_chars, 1, '')
+    6              0.000149   let prev_chars = split(before, '\zs')
+    6              0.000018   let prev_char = get(prev_chars, -1, '')
+                            
+    6              0.000006   let eol = 0
+    6              0.000034   if col('$') -  col('.') <= 1
+    5              0.000006     let eol = 1
+    5              0.000004   end
+                            
+                              " Ignore auto close if prev character is \
+    6              0.000012   if prev_char == '\'
+                                return a:key
+                              end
+                            
+                              " The key is difference open-pair, then it means only for ) ] } by default
+    6              0.000028   if !has_key(b:AutoPairs, a:key)
+    2              0.000024     let b:autopairs_saved_pair = [a:key, getpos('.')]
+                            
+                                " Skip the character if current character is the same as input
+    2              0.000005     if current_char == a:key
+    2              0.000005       return s:Right
+                                end
+                            
+                                if !g:AutoPairsFlyMode
+                                  " Skip the character if next character is space
+                                  if current_char == ' ' && next_char == a:key
+                                    return s:Right.s:Right
+                                  end
+                            
+                                  " Skip the character if closed pair is next character
+                                  if current_char == ''
+                                    if g:AutoPairsMultilineClose
+                                      let next_lineno = line('.')+1
+                                      let next_line = getline(nextnonblank(next_lineno))
+                                      let next_char = matchstr(next_line, '\s*\zs.')
+                                    else
+                                      let next_char = matchstr(line, '\s*\zs.')
+                                    end
+                                    if next_char == a:key
+                                      return "\<ESC>e^a"
+                                    endif
+                                  endif
+                                endif
+                            
+                                " Fly Mode, and the key is closed-pairs, search closed-pair and jump
+                                if g:AutoPairsFlyMode && has_key(b:AutoPairsClosedPairs, a:key)
+                                  let n = stridx(after, a:key)
+                                  if n != -1
+                                    return repeat(s:Right, n+1)
+                                  end
+                                  if search(a:key, 'W')
+                                    " force break the '.' when jump to different line
+                                    return "\<Right>"
+                                  endif
+                                endif
+                            
+                                " Insert directly if the key is not an open key
+                                return a:key
+                              end
+                            
+    4              0.000008   let open = a:key
+    4              0.000012   let close = b:AutoPairs[open]
+                            
+    4              0.000012   if current_char == close && open == close
+    1              0.000002     return s:Right
+                              end
+                            
+                              " Ignore auto close ' if follows a word
+                              " MUST after closed check. 'hello|'
+    3              0.000020   if a:key == "'" && prev_char =~ '\v\w'
+                                return a:key
+                              end
+                            
+                              " support for ''' ``` and """
+    3              0.000005   if open == close
+                                " The key must be ' " `
+    1              0.000005     let pprev_char = line[col('.')-3]
+    1              0.000002     if pprev_char == open && prev_char == open
+                                  " Double pair found
+                                  return repeat(a:key, 4) . repeat(s:Left, 3)
+                                end
+    1              0.000001   end
+                            
+    3              0.000006   let quotes_num = 0
+                              " Ignore comment line for vim file
+    3              0.000011   if &filetype == 'vim' && a:key == '"'
+                                if before =~ '^\s*$'
+                                  return a:key
+                                end
+                                if before =~ '^\s*"'
+                                  let quotes_num = -1
+                                end
+                              end
+                            
+                              " Keep quote number is odd.
+                              " Because quotes should be matched in the same line in most of situation
+    3              0.000008   if g:AutoPairsSmartQuotes && open == close
+                                " Remove \\ \" \'
+    1              0.000008     let cleaned_line = substitute(line, '\v(\\.)', '', 'g')
+    1              0.000001     let n = quotes_num
+    1              0.000001     let pos = 0
+    1              0.000001     while 1
+    1              0.000003       let pos = stridx(cleaned_line, open, pos)
+    1              0.000001       if pos == -1
+    1              0.000001         break
+                                  end
+                                  let n = n + 1
+                                  let pos = pos + 1
+                                endwhile
+    1              0.000002     if n % 2 == 1
+                                  return a:key
+                                endif
+    1              0.000001   endif
+                            
+    3              0.000012   return open.close.s:Left
+
+FUNCTION  <SNR>77_InsideCommentOrStringAndShouldStop()
+Called 68 times
+Total time:   0.011158
+ Self time:   0.001205
+
+count  total (s)   self (s)
+   68   0.010397   0.000444   let retval = s:InsideCommentOrString()
+   68              0.000145   let inside_comment = retval == 1
+   68              0.000116   let inside_string = retval == 2
+                            
+   68              0.000201   if inside_comment && g:ycm_complete_in_comments || inside_string && g:ycm_complete_in_strings
+   12              0.000010     return 0
+                              endif
+                            
+   56              0.000060   return retval
+
+FUNCTION  <SNR>77_OnFileReadyToParse()
+Called 5 times
+Total time:   0.016104
+ Self time:   0.015259
+
+count  total (s)   self (s)
+                              " Accepts an optional parameter that is either 0 or 1. If 1, send a
+                              " FileReadyToParse event notification, whether the buffer has changed or not;
+                              " effectively forcing a parse of the buffer. Default is 0.
+    5              0.000018   let force_parsing = a:0 > 0 && a:1
+                            
+                              " We only want to send a new FileReadyToParse event notification if the buffer
+                              " has changed since the last time we sent one, or if forced.
+    5   0.000899   0.000054   if force_parsing || s:Pyeval( "ycm_state.NeedsReparse()" )
+    5              0.015001     exec s:python_command "ycm_state.OnFileReadyToParse()"
+                            
+    5              0.000048     call timer_stop( s:pollers.file_parse_response.id )
+    5              0.000077     let s:pollers.file_parse_response.id = timer_start( s:pollers.file_parse_response.wait_milliseconds, function( 's:PollFileParseResponse' ) )
+    5              0.000007   endif
+
+FUNCTION  <SNR>77_PollFileParseResponse()
+Called 5 times
+Total time:   0.006520
+ Self time:   0.005707
+
+count  total (s)   self (s)
+    5   0.000918   0.000105   if !s:Pyeval( "ycm_state.FileParseRequestReady()" )
+                                let s:pollers.file_parse_response.id = timer_start( s:pollers.file_parse_response.wait_milliseconds, function( 's:PollFileParseResponse' ) )
+                                return
+                              endif
+                            
+    5              0.005527   exec s:python_command "ycm_state.HandleFileParseRequest()"
+
+FUNCTION  syntastic#util#shexpand()
+Called 3 times
+Total time:   0.000250
+ Self time:   0.000032
+
+count  total (s)   self (s)
+    3   0.000246   0.000028     return syntastic#util#shescape(a:0 ? expand(a:string, a:1) : expand(a:string, 1))
+
+FUNCTION  syntastic#util#argsescape()
+Called 45 times
+Total time:   0.000678
+ Self time:   0.000549
+
+count  total (s)   self (s)
+   45              0.000163     if type(a:opt) == type('') && a:opt !=# ''
+    5              0.000008         return [a:opt]
+                                elseif type(a:opt) == type([])
+    2   0.000158   0.000029         return map(copy(a:opt), 'syntastic#util#shescape(v:val)')
+                                endif
+                            
+   38              0.000033     return []
+
+FUNCTION  SyntaxCheckers_python_pylint_GetLocList()
+Called 1 time
+Total time:   6.396092
+ Self time:   0.002682
+
+count  total (s)   self (s)
+    1   0.000682   0.000012     let makeprg = self.makeprgBuild({ 'args_after': (s:pylint_new ?       '-f text --msg-template="{path}:{line}:{column}:{C}: [{symbol}] {msg}" -r n' :       '-f parseable -r n -i y') })
+                            
+    1              0.000005     let errorformat = '%A%f:%l:%c:%t: %m,' . '%A%f:%l: %m,' . '%A%f:(%l): %m,' . '%-Z%p^%.%#,' . '%-G%.%#'
+                            
+    1   0.000023   0.000010     let env = syntastic#util#isRunningWindows() ? {} : { 'TERM': 'dumb' }
+                            
+    1   6.392864   0.000137     let loclist = SyntasticMake({ 'makeprg': makeprg, 'errorformat': errorformat, 'env': env, 'returns': range(32) })
+                            
+  116              0.000085     for e in loclist
+  115              0.000103         if !s:pylint_new
+                                        let e['type'] = e['text'][1]
+                                    endif
+                            
+  115              0.000561         if e['type'] =~? '\m^[EF]'
+    7              0.000011             let e['type'] = 'E'
+    7              0.000007         elseif e['type'] =~? '\m^[CRW]'
+  108              0.000180             let e['type'] = 'W'
+  108              0.000065         else
+                                        let e['valid'] = 0
+                                    endif
+                            
+  115              0.000142         let e['col'] += 1
+  115              0.000130         let e['vcol'] = 0
+  115              0.000083     endfor
+                            
+    1              0.000005     return loclist
+
+FUNCTIONS SORTED ON TOTAL TIME
+count  total (s)   self (s)  function
+    2   7.345227   0.000154  <SNR>26_BufWritePostHook()
+    2   7.343453   0.000497  <SNR>26_UpdateErrors()
+    2   6.570950   0.001460  <SNR>26_CacheErrors()
+    3   6.548295   0.000147  18()
+    3   6.547278   0.000624  17()
+    3   6.541186   0.010073  SyntasticMake()
+    3   6.530849   0.002177  syntastic#util#system()
+    1   6.396092   0.002682  SyntaxCheckers_python_pylint_GetLocList()
+    6   1.062689   0.001067  GetPythonIndent()
+   12   1.061439             <SNR>85_SearchParensPair()
+  863   0.851125   0.009172  SimpylFold#FoldExpr()
+    5   0.841953   0.444850  <SNR>83_cache()
+    2   0.771182   0.001011  78()
+    2   0.741881   0.000213  97()
+    6   0.532168   0.000183  <SNR>85_StatementStart()
+    2   0.378475   0.377071  100()
+    2   0.363105   0.361394  99()
+ 1087   0.313803   0.177600  <SNR>83_multi_string()
+   26   0.257491   0.002655  SyntasticRefreshCursor()
+    9   0.254244   0.001287  syntastic#util#wideMsg()
+
+FUNCTIONS SORTED ON SELF TIME
+count  total (s)   self (s)  function
+   12              1.061439  <SNR>85_SearchParensPair()
+    5   0.841953   0.444850  <SNR>83_cache()
+    2   0.378475   0.377071  100()
+    2   0.363105   0.361394  99()
+    9              0.252957  syntastic#util#redraw()
+ 1087   0.313803   0.177600  <SNR>83_multi_string()
+ 2291              0.136203  <SNR>83_matchstrpos()
+   63   0.125348   0.105429  <SNR>77_InvokeCompletion()
+  343              0.090677  <SNR>77_Pyeval()
+ 1209              0.055193  <SNR>83_indent()
+  137              0.033692  UltiSnips#TrackChange()
+ 1204              0.027921  <SNR>83_blanks_adj()
+  169              0.025329  <SNR>56_Highlight_Matching_Pair()
+   68   0.039519   0.023846  <SNR>77_IdentifierFinishedOperations()
+   68   0.204707   0.016032  <SNR>77_OnTextChangedInsertMode()
+    5   0.016104   0.015259  <SNR>77_OnFileReadyToParse()
+    3   6.541186   0.010073  SyntasticMake()
+   68              0.009953  <SNR>77_InsideCommentOrString()
+  863   0.851125   0.009172  SimpylFold#FoldExpr()
+    2   0.009158   0.008940  36()
+

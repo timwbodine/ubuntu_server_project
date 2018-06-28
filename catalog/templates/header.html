@@ -1,0 +1,34 @@
+<div class="header-container">
+	<div class="item header-item-a">
+		<span>
+		<a  href="{{url_for('all_recipes_handler')}}">
+			Show All Recipes
+		</a>
+		</span>
+	</div>
+	<div class="item header-item-b">
+		<h1>RECIPES APP!</h1>
+	</div>
+	<div class="item header-item-c">
+
+		{%if username !=  None %}
+		<img src="{{picture}}" alt="user image" height="42" width="42">
+		<a  href="{{url_for('googleDisconnect')}}">Log out {{username}} </a>
+		{%else%}
+		
+		<a  href="{{url_for('showLogin')}}">User login</a>
+		{%endif%}
+	</div>
+	
+</div>
+<div class="gutter">
+		{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for category, message in messages %}
+		<li class="{{category}} flash">{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+</div>
